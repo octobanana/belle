@@ -1,0 +1,1 @@
+This is a static file being served from the public directory!
