@@ -4,6 +4,7 @@
 namespace fs = boost::filesystem;
 
 #include <string>
+#include <map>
 
 namespace OB
 {
@@ -45,33 +46,112 @@ namespace Belle
     return c;
   }
 
-  bool is_equal(std::string str_1, std::string str_2)
-  {
-      auto n = str_1.size();
-      if(str_2.size() != n)
-          return false;
-      auto p1 = str_1.data();
-      auto p2 = str_2.data();
-      char a, b;
-      while(n--)
-      {
-          a = *p1++;
-          b = *p2++;
-          if(a != b)
-              goto slow;
-      }
-      return true;
+  std::map<std::string, std::string> mime_types {
+    {"html", "text/html"},
+    {"htm", "text/html"},
+    {"shtml", "text/html"},
+    {"css", "text/css"},
+    {"xml", "text/xml"},
+    {"gif", "image/gif"},
+    {"jpg", "image/jpg"},
+    {"jpeg", "image/jpg"},
+    {"js", "application/javascript"},
+    {"atom", "application/atom+xml"},
+    {"rss", "application/rss+xml"},
+    {"mml", "text/mathml"},
+    {"txt", "text/plain"},
+    {"jad", "text/vnd.sun.j2me.app-descriptor"},
+    {"wml", "text/vnd.wap.wml"},
+    {"htc", "text/x-component"},
+    {"png", "image/png"},
+    {"tif", "image/tiff"},
+    {"tiff", "image/tiff"},
+    {"wbmp", "image/vnd.wap.wbmp"},
+    {"ico", "image/x-icon"},
+    {"jng", "image/x-jng"},
+    {"bmp", "image/x-ms-bmp"},
+    {"svg", "image/svg+xml"},
+    {"svgz", "image/svg+xml"},
+    {"webp", "image/webp"},
+    {"woff", "application/font-woff"},
+    {"jar", "application/java-archive"},
+    {"war", "application/java-archive"},
+    {"ear", "application/java-archive"},
+    {"json", "application/json"},
+    {"hqx", "application/mac-binhex40"},
+    {"doc", "application/msword"},
+    {"pdf", "application/pdf"},
+    {"ps", "application/postscript"},
+    {"eps", "application/postscript"},
+    {"ai", "application/postscript"},
+    {"rtf", "application/rtf"},
+    {"m3u8", "application/vnd.apple.mpegurl"},
+    {"xls", "application/vnd.ms-excel"},
+    {"eot", "application/vnd.ms-fontobject"},
+    {"ppt", "application/vnd.ms-powerpoint"},
+    {"wmlc", "application/vnd.wap.wmlc"},
+    {"kml", "application/vnd.google-earth.kml+xml"},
+    {"kmz", "application/vnd.google-earth.kmz"},
+    {"7z", "application/x-7z-compressed"},
+    {"cco", "application/x-cocoa"},
+    {"jardiff", "application/x-java-archive-diff"},
+    {"jnlp", "application/x-java-jnlp-file"},
+    {"run", "application/x-makeself"},
+    {"pm", "application/x-perl"},
+    {"pl", "application/x-perl"},
+    {"pdb", "application/x-pilot"},
+    {"prc", "application/x-pilot"},
+    {"rar", "application/x-rar-compressed"},
+    {"rpm", "application/x-redhat-package-manager"},
+    {"sea", "application/x-sea"},
+    {"swf", "application/x-shockwave-flash"},
+    {"sit", "application/x-stuffit"},
+    {"tk", "application/x-tcl"},
+    {"tcl", "application/x-tcl"},
+    {"crt", "application/x-x509-ca-cert"},
+    {"pem", "application/x-x509-ca-cert"},
+    {"der", "application/x-x509-ca-cert"},
+    {"xpi", "application/x-xpinstall"},
+    {"xhtml", "application/xhtml+xml"},
+    {"xspf", "application/xspf+xml"},
+    {"zip", "application/zip"},
+    {"dll", "application/octet-stream"},
+    {"exe", "application/octet-stream"},
+    {"bin", "application/octet-stream"},
+    {"deb", "application/octet-stream"},
+    {"dmg", "application/octet-stream"},
+    {"img", "application/octet-stream"},
+    {"iso", "application/octet-stream"},
+    {"msm", "application/octet-stream"},
+    {"msp", "application/octet-stream"},
+    {"msi", "application/octet-stream"},
+    {"docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"},
+    {"xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"},
+    {"pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation"},
+    {"kar", "audio/midi"},
+    {"midi", "audio/midi"},
+    {"mid", "audio/midi"},
+    {"mp3", "audio/mpeg"},
+    {"ogg", "audio/ogg"},
+    {"m4a", "audio/x-m4a"},
+    {"ra", "audio/x-realaudio"},
+    {"3gp", "video/3gpp"},
+    {"3gpp", "video/3gpp"},
+    {"ts", "video/mp2t"},
+    {"mp4", "video/mp4"},
+    {"mpg", "video/mpeg"},
+    {"mpeg", "video/mpeg"},
+    {"mov", "video/quicktime"},
+    {"webm", "video/webm"},
+    {"flv", "video/x-flv"},
+    {"m4v", "video/x-m4v"},
+    {"mng", "video/x-mng"},
+    {"asf", "video/x-ms-asf"},
+    {"asx", "video/x-ms-asf"},
+    {"wmv", "video/x-ms-wmv"},
+    {"avi", "video/x-msvideo"}
+  };
 
-      while(n--)
-      {
-      slow:
-          if(to_lower(a) != to_lower(b))
-              return false;
-          a = *p1++;
-          b = *p2++;
-      }
-      return true;
-  }
   std::string mime_type(const std::string file_path)
   {
     const fs::path clean_path {fs::canonical(file_path)};
@@ -83,119 +163,11 @@ namespace Belle
     }
     ext.erase(0, 1);
 
-    // TODO optimize in an orderable data container
-    if(is_equal(ext, "html")) return "text/html";
-    if(is_equal(ext, "htm")) return "text/html";
-    if(is_equal(ext, "shtml")) return "text/html";
-
-    if(is_equal(ext, "css")) return "text/css";
-    if(is_equal(ext, "xml")) return "text/xml";
-    if(is_equal(ext, "gif")) return "image/gif";
-    if(is_equal(ext, "jpg")) return "image/jpg";
-    if(is_equal(ext, "jpeg")) return "image/jpg";
-    if(is_equal(ext, "js")) return "application/javascript";
-    if(is_equal(ext, "atom")) return "application/atom+xml";
-    if(is_equal(ext, "rss")) return "application/rss+xml";
-
-    if(is_equal(ext, "mml")) return "text/mathml";
-    if(is_equal(ext, "txt")) return "text/plain";
-    if(is_equal(ext, "jad")) return "text/vnd.sun.j2me.app-descriptor";
-    if(is_equal(ext, "wml")) return "text/vnd.wap.wml";
-    if(is_equal(ext, "htc")) return "text/x-component";
-
-    if(is_equal(ext, "png")) return "image/png";
-    if(is_equal(ext, "tif")) return "image/tiff";
-    if(is_equal(ext, "tiff")) return "image/tiff";
-    if(is_equal(ext, "wbmp")) return "image/vnd.wap.wbmp";
-    if(is_equal(ext, "ico")) return "image/x-icon";
-    if(is_equal(ext, "jng")) return "image/x-jng";
-    if(is_equal(ext, "bmp")) return "image/x-ms-bmp";
-    if(is_equal(ext, "svg")) return "image/svg+xml";
-    if(is_equal(ext, "svgz")) return "image/svg+xml";
-    if(is_equal(ext, "webp")) return "image/webp";
-
-    if(is_equal(ext, "woff")) return "application/font-woff";
-    if(is_equal(ext, "jar")) return "application/java-archive";
-    if(is_equal(ext, "war")) return "application/java-archive";
-    if(is_equal(ext, "ear")) return "application/java-archive";
-    if(is_equal(ext, "json")) return "application/json";
-    if(is_equal(ext, "hqx")) return "application/mac-binhex40";
-    if(is_equal(ext, "doc")) return "application/msword";
-    if(is_equal(ext, "pdf")) return "application/pdf";
-    if(is_equal(ext, "ps")) return "application/postscript";
-    if(is_equal(ext, "eps")) return "application/postscript";
-    if(is_equal(ext, "ai")) return "application/postscript";
-    if(is_equal(ext, "rtf")) return "application/rtf";
-
-    if(is_equal(ext, "m3u8")) return "application/vnd.apple.mpegurl";
-    if(is_equal(ext, "xls")) return "application/vnd.ms-excel";
-    if(is_equal(ext, "eot")) return "application/vnd.ms-fontobject";
-    if(is_equal(ext, "ppt")) return "application/vnd.ms-powerpoint";
-    if(is_equal(ext, "wmlc")) return "application/vnd.wap.wmlc";
-    if(is_equal(ext, "kml")) return "application/vnd.google-earth.kml+xml";
-    if(is_equal(ext, "kmz")) return "application/vnd.google-earth.kmz";
-    if(is_equal(ext, "7z")) return "application/x-7z-compressed";
-    if(is_equal(ext, "cco")) return "application/x-cocoa";
-    if(is_equal(ext, "jardiff")) return "application/x-java-archive-diff";
-    if(is_equal(ext, "jnlp")) return "application/x-java-jnlp-file";
-    if(is_equal(ext, "run")) return "application/x-makeself";
-    if(is_equal(ext, "pm")) return "application/x-perl";
-    if(is_equal(ext, "pl")) return "application/x-perl";
-    if(is_equal(ext, "pdb")) return "application/x-pilot";
-    if(is_equal(ext, "prc")) return "application/x-pilot";
-    if(is_equal(ext, "rar")) return "application/x-rar-compressed";
-    if(is_equal(ext, "rpm")) return "application/x-redhat-package-manager";
-    if(is_equal(ext, "sea")) return "application/x-sea";
-    if(is_equal(ext, "swf")) return "application/x-shockwave-flash";
-    if(is_equal(ext, "sit")) return "application/x-stuffit";
-    if(is_equal(ext, "tk")) return "application/x-tcl";
-    if(is_equal(ext, "tcl")) return "application/x-tcl";
-    if(is_equal(ext, "crt")) return "application/x-x509-ca-cert";
-    if(is_equal(ext, "pem")) return "application/x-x509-ca-cert";
-    if(is_equal(ext, "der")) return "application/x-x509-ca-cert";
-    if(is_equal(ext, "xpi")) return "application/x-xpinstall";
-    if(is_equal(ext, "xhtml")) return "application/xhtml+xml";
-    if(is_equal(ext, "xspf")) return "application/xspf+xml";
-    if(is_equal(ext, "zip")) return "application/zip";
-
-    if(is_equal(ext, "dll")) return "application/octet-stream";
-    if(is_equal(ext, "exe")) return "application/octet-stream";
-    if(is_equal(ext, "bin")) return "application/octet-stream";
-    if(is_equal(ext, "deb")) return "application/octet-stream";
-    if(is_equal(ext, "dmg")) return "application/octet-stream";
-    if(is_equal(ext, "img")) return "application/octet-stream";
-    if(is_equal(ext, "iso")) return "application/octet-stream";
-    if(is_equal(ext, "msm")) return "application/octet-stream";
-    if(is_equal(ext, "msp")) return "application/octet-stream";
-    if(is_equal(ext, "msi")) return "application/octet-stream";
-
-    if(is_equal(ext, "docx")) return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-    if(is_equal(ext, "xlsx")) return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-    if(is_equal(ext, "pptx")) return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
-
-    if(is_equal(ext, "kar")) return "audio/midi";
-    if(is_equal(ext, "midi")) return "audio/midi";
-    if(is_equal(ext, "mid")) return "audio/midi";
-    if(is_equal(ext, "mp3")) return "audio/mpeg";
-    if(is_equal(ext, "ogg")) return "audio/ogg";
-    if(is_equal(ext, "m4a")) return "audio/x-m4a";
-    if(is_equal(ext, "ra")) return "audio/x-realaudio";
-
-    if(is_equal(ext, "3gp")) return "video/3gpp";
-    if(is_equal(ext, "3gpp")) return "video/3gpp";
-    if(is_equal(ext, "ts")) return "video/mp2t";
-    if(is_equal(ext, "mp4")) return "video/mp4";
-    if(is_equal(ext, "mpg")) return "video/mpeg";
-    if(is_equal(ext, "mpeg")) return "video/mpeg";
-    if(is_equal(ext, "mov")) return "video/quicktime";
-    if(is_equal(ext, "webm")) return "video/webm";
-    if(is_equal(ext, "flv")) return "video/x-flv";
-    if(is_equal(ext, "m4v")) return "video/x-m4v";
-    if(is_equal(ext, "mng")) return "video/x-mng";
-    if(is_equal(ext, "asf")) return "video/x-ms-asf";
-    if(is_equal(ext, "asx")) return "video/x-ms-asf";
-    if(is_equal(ext, "wmv")) return "video/x-ms-wmv";
-    if(is_equal(ext, "avi")) return "video/x-msvideo";
+    std::string str = to_lower(ext);
+    if (mime_types.find(str) != mime_types.end())
+    {
+      return mime_types.at(str);
+    }
 
     return "application/octet-stream";
   }

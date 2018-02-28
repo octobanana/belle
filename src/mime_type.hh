@@ -2,6 +2,7 @@
 #define OB_MIME_TYPE_HH
 
 #include <string>
+#include <map>
 
 namespace OB
 {
@@ -16,6 +17,7 @@ namespace Belle
   bool is_equal(std::string str_1, std::string str_2);
 
   std::string mime_type(const std::string file_path);
+
 } // namespace Belle
 } // namespace OB
 
