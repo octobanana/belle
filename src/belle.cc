@@ -93,7 +93,8 @@ namespace Belle
     {
       req_error(400);
       res_.version = 11;
-      res_.set("server", "Belle v0.1.0");
+      res_.set("server", "Belle");
+      res_.keep_alive(req_.keep_alive());
       write_response();
       return;
     }
@@ -136,7 +137,7 @@ namespace Belle
           // run user function
           user_func(ctx_);
           res_.version = 11;
-          res_.set("server", "Belle v0.1.0");
+          res_.set("server", "Belle");
 
           write_response();
           return;
@@ -153,6 +154,9 @@ namespace Belle
         res_.result(http::status::ok);
         res_.set("content-type", v_file.at(1));
         res_.body = v_file.at(0);
+        res_.version = 11;
+        res_.set("server", "Belle");
+        res_.keep_alive(req_.keep_alive());
         write_response();
         return;
       }
