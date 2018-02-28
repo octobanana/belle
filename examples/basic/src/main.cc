@@ -50,8 +50,8 @@ int main(int argc, char *argv[])
     // set the 'content-type' header to 'text/plain'
     res.set("content-type", "text/plain");
 
-    // set the 'connection' header to 'keep-alive'
-    res.set("connection", "keep-alive");
+    // set keep alive
+    res.keep_alive(req.keep_alive());
 
     // set the http status code to '200'
     res.result(200);
@@ -65,8 +65,8 @@ int main(int argc, char *argv[])
     auto& req = ctx.req;
     auto& res = ctx.res;
 
+    res.keep_alive(req.keep_alive());
     res.set("content-type", "text/plain");
-    res.set("connection", "keep-alive");
     res.result(200);
 
     // return the http method
@@ -75,9 +75,10 @@ int main(int argc, char *argv[])
 
   // handle route GET '/redirect'
   app.route("/redirect", Method::get, [](Ctx& ctx) {
+    auto& req = ctx.req;
     auto& res = ctx.res;
 
-    res.set("connection", "keep-alive");
+    res.keep_alive(req.keep_alive());
     res.set("location", "/");
     res.result(303);
   });
