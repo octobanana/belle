@@ -36,7 +36,7 @@ namespace Belle
     socket_ {std::move(socket)},
     attr_ {attr},
     buffer_ {BUFFER_SIZE},
-    deadline_ {socket_.get_io_service(), std::chrono::seconds(60)}
+    deadline_ {socket_.get_io_context(), std::chrono::seconds(60)}
   {
   }
 
@@ -54,7 +54,7 @@ namespace Belle
       socket_,
       buffer_,
       req_,
-      [self](boost::beast::error_code ec)
+      [self](std::error_code ec, size_t bytes)
       {
         if(!ec)
         {
@@ -83,7 +83,7 @@ namespace Belle
         res_.result(static_cast<unsigned int>(e));
         res_.set(http::field::content_type, "text/plain");
         res_.keep_alive(req_.keep_alive());
-        res_.body = "Error: " + std::to_string(e);
+        res_.body() = "Error: " + std::to_string(e);
         return;
       }
     };
@@ -92,7 +92,7 @@ namespace Belle
     if (req_.method() == http::verb::unknown)
     {
       req_error(400);
-      res_.version = 11;
+      res_.version(11);
       res_.set("server", "Belle");
       res_.keep_alive(req_.keep_alive());
       write_response();
@@ -136,7 +136,7 @@ namespace Belle
 
           // run user function
           user_func(ctx_);
-          res_.version = 11;
+          res_.version(11);
           res_.set("server", "Belle");
 
           write_response();
@@ -153,8 +153,8 @@ namespace Belle
         auto v_file {static_file()};
         res_.result(http::status::ok);
         res_.set("content-type", v_file.at(1));
-        res_.body = v_file.at(0);
-        res_.version = 11;
+        res_.body() = v_file.at(0);
+        res_.version(11);
         res_.set("server", "Belle");
         res_.keep_alive(req_.keep_alive());
         write_response();
@@ -178,12 +178,12 @@ namespace Belle
   {
     auto self = shared_from_this();
 
-    res_.set(http::field::content_length, res_.body.size());
+    res_.set(http::field::content_length, res_.body().size());
 
     http::async_write(
       socket_,
       res_,
-      [self](boost::beast::error_code ec)
+      [self](boost::beast::error_code ec, size_t bytes)
       {
         self->socket_.shutdown(tcp::socket::shutdown_send, ec);
         self->deadline_.cancel();
@@ -321,7 +321,7 @@ namespace Belle
     return;
   }
 
-  boost::asio::io_service& Http::ios()
+  boost::asio::io_context& Http::ios()
   {
     return ios_;
   }

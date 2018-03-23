@@ -113,7 +113,7 @@ namespace Belle
     Http();
     ~Http();
 
-    boost::asio::io_service& ios();
+    boost::asio::io_context& ios();
     Http& address(std::string _address);
     Http& port(uint16_t _port);
     void listen(std::string _address = "", uint16_t _port = 0);
@@ -126,7 +126,7 @@ namespace Belle
     std::map<std::string, std::vector<std::string>> get_routes() const;
 
   private:
-    boost::asio::io_service ios_ {1};
+    boost::asio::io_context ios_ {1};
     std::string address_ {"127.0.0.1"};
     uint16_t port_ {4480};
     std::shared_ptr<Attr> attr_ {std::make_shared<Attr>()};
