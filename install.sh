@@ -16,13 +16,13 @@ fi
 
 if [[ ${BUILD_TYPE} == "Debug" ]]; then
   printf "\nInstalling Debug ${APP}\n"
-  mkdir -vp /usr/local/include/ob
-  cp -vr ./include/belle.hh /usr/local/include/ob/
-  cp -v ./build/debug/libbelle.so /usr/local/lib/
+  sudo mkdir -vp /usr/local/include/ob
+  sudo cp -vr ./include/belle.hh /usr/local/include/ob/
+  sudo cp -v ./build/debug/libbelle.so /usr/local/lib/
 
 elif [[ ${BUILD_TYPE} == "Release" ]]; then
   printf "\nInstalling Release ${APP}\n"
-  mkdir -vp /usr/local/include/ob
-  cp -vr ./include/belle.hh /usr/local/include/ob/
-  cp -v ./build/release/libbelle.so /usr/local/lib/
+  sudo mkdir -vp /usr/local/include/ob
+  sudo cp -vr ./include/belle.hh /usr/local/include/ob/
+  sudo cp -v ./build/release/libbelle.so /usr/local/lib/
 fi
