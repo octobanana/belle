@@ -12,7 +12,7 @@ It currently is not ment to be an edge server, as https is not yet implemented. 
 * Routes can match a single, multiple, or any http methods.
 
 ### Dependencies
-Tested with Boost v1.65 and Beast v124  
+Requires Boost v1.66  
 * Boost Beast
 * Boost System
 * Boost Filesystem
