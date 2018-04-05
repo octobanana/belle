@@ -31,11 +31,11 @@ int main(int argc, char *argv[])
 
   // set the listening address
   std::string address {"127.0.0.1"};
-  app.address("127.0.0.1");
+  app.address(address);
 
   // set the listening port
   int port {8080};
-  app.port(8080);
+  app.port(port);
 
   // enable serving static files
   // set the relative path to the public directory
@@ -57,7 +57,7 @@ int main(int argc, char *argv[])
     res.result(200);
 
     // send hello world plain text
-    res.body = "Hello, World!";
+    res.body() = "Hello, World!";
   });
 
   // handle all methods to route '/method'
@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
     res.result(200);
 
     // return the http method
-    res.body = "Method: " + ctx.method;
+    res.body() = "Method: " + ctx.method;
   });
 
   // handle route GET '/redirect'
@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
     res.result(Status::ok);
 
     // echo back request body
-    res.body = req.body;
+    res.body() = req.body();
   });
 
   // handle route GET '/routes'
@@ -105,7 +105,7 @@ int main(int argc, char *argv[])
     res.keep_alive(req.keep_alive());
     res.result(Status::ok);
 
-    res.body = str_routes(app.get_routes());
+    res.body() = str_routes(app.get_routes());
   });
 
   // handle route GET '/regex/<letters_only>/<numbers_only>/'
@@ -127,7 +127,7 @@ int main(int argc, char *argv[])
     // url[2] contains capture group 2
     ss << "arg2: " << url.at(2) << "\n";
 
-    res.body = ss.str();
+    res.body() = ss.str();
   });
 
   // set error callback
@@ -143,12 +143,12 @@ int main(int argc, char *argv[])
 
     try
     {
-      res.body = "Custom Error: " + std::to_string(err);
+      res.body() = "Custom Error: " + std::to_string(err);
     }
     catch (...)
     {
       res.result(500);
-      res.body = "Custom Error: 500";
+      res.body() = "Custom Error: 500";
     }
   });
 
