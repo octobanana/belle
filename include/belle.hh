@@ -31,8 +31,6 @@ namespace Belle
   using Status = boost::beast::http::status;
   using Header = boost::beast::http::field;
 
-  int METHOD_ALL {100};
-
   struct Ctx
   {
     int error_code {0};
@@ -98,6 +96,7 @@ namespace Belle
     Ctx ctx_ {};
     http::request<http::string_body>& req_ {ctx_.req};
     http::response<http::string_body>& res_ {ctx_.res};
+    int const METHOD_ALL {100};
 
     void read_request();
     void process_request();
@@ -113,7 +112,7 @@ namespace Belle
     Http();
     ~Http();
 
-    boost::asio::io_context& ios();
+    boost::asio::io_context& io();
     Http& address(std::string _address);
     Http& port(uint16_t _port);
     void listen(std::string _address = "", uint16_t _port = 0);
@@ -130,6 +129,7 @@ namespace Belle
     std::string address_ {"127.0.0.1"};
     uint16_t port_ {4480};
     std::shared_ptr<Attr> attr_ {std::make_shared<Attr>()};
+    int const METHOD_ALL {100};
 
     void http_server(tcp::acceptor& acceptor, tcp::socket& socket);
   }; // class Http

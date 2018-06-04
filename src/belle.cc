@@ -321,7 +321,7 @@ namespace Belle
     return;
   }
 
-  boost::asio::io_context& Http::ios()
+  boost::asio::io_context& Http::io()
   {
     return ios_;
   }
