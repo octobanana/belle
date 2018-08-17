@@ -1,7 +1,7 @@
 #include "mime_type.hh"
 
-#include <boost/filesystem.hpp>
-namespace fs = boost::filesystem;
+#include <filesystem>
+namespace fs = std::filesystem;
 
 #include <string>
 #include <map>
@@ -157,7 +157,7 @@ namespace Belle
     const fs::path clean_path {fs::canonical(file_path)};
     std::string ext {clean_path.extension().string()};
 
-    if (ext.at(0) != '.')
+    if (ext.empty() || ext.at(0) != '.')
     {
       return "application/octet-stream";
     }
