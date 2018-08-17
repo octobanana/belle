@@ -30,6 +30,7 @@ include_directories(
 set (SOURCES
   src/belle.cc
   src/mime_type.cc
+  src/string.cc
 )
 
 set (HEADERS
@@ -45,5 +46,5 @@ add_library (
 target_link_libraries (
   ${TARGET}
   boost_system
-  boost_filesystem
+  /usr/lib/libstdc++fs.a
 )

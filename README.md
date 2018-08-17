@@ -15,7 +15,6 @@ It currently is not ment to be an edge server, as https is not yet implemented. 
 Requires Boost v1.66  
 * Boost Beast
 * Boost System
-* Boost Filesystem
 
 ## Usage
 The hello world of Belle:  
