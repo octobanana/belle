@@ -534,7 +534,7 @@ public:
 
   using Channels = std::unordered_map<std::string, Channel>;
 
-  class Http_Request : public http::message<true, http::string_body>
+  class Http_Request : public http::request<http::string_body>
   {
     using Url = std::vector<std::string>;
     using Params = std::unordered_multimap<std::string, std::string>;
