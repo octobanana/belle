@@ -37,13 +37,29 @@ int main(int argc, char *argv[])
     ctx.res.body() = "Hello, Belle!";
   });
 
+  // handle route POST '/'
+  app.on_http("/", Belle::Method::post, [](Belle::Server::Http_Ctx& ctx)
+  {
+    // set http response headers
+    ctx.res.set(Belle::Header::content_type, "text/plain");
+
+    // set the http status code
+    ctx.res.result(Belle::Status::ok);
+
+    // echo back the request body
+    ctx.res.body() = ctx.req.body();
+  });
+
   // print out the address and port
   // along with the routes
   std::cout
   << "Server: " << address << ":" << port << "\n\n"
   << "Try out the following urls:\n"
-  << "  http://127.0.0.1:8080/\n"
-  << "  http://127.0.0.1:8080/index.html\n";
+  << "  http://" << address << ":" << port << "/\n"
+  << "  http://" << address << ":" << port << "/index.html\n\n"
+  << "Try running the following command:\n"
+  << "  curl -X POST --data 'post body message here' http://"
+  << address << ":" << port << "/\n\n";
 
   // start the server
   app.listen();
