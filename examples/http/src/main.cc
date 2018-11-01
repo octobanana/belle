@@ -26,7 +26,7 @@ std::string http_routes(Belle::Server::Http_Routes& routes)
     {
       if (static_cast<Belle::Method>(m.first) == Belle::Method::unknown)
       {
-        res << " All";
+        res << " ALL";
       }
       else
       {
@@ -53,11 +53,15 @@ int main(int argc, char *argv[])
   int port {8080};
   app.port(port);
 
-  // disable websocket upgrades
-  app.websocket(false);
+  // set the number of threads
+  // default value is 1 single thread
+  app.threads(std::thread::hardware_concurrency());
 
-  // set the number of threads to 2
-  app.threads(2);
+  // multithreading can be enabled on an http only server
+  // websocket upgrades must be disabled to use multithreading
+  // the websocket channel implementation is not thread safe
+  // default value is true
+  app.websocket(false);
 
   // enable serving static files from a public directory
   // if the path is relative, make sure to run the program
@@ -84,14 +88,14 @@ int main(int argc, char *argv[])
   });
 
   // handle route GET '/'
-  app.on_http("/", Belle::Method::get, [&](Belle::Server::Http_Ctx& ctx)
+  app.on_http("/", Belle::Method::get, [](Belle::Server::Http_Ctx& ctx)
   {
     // the response string
     std::string res {R"(
       <a href="/">home</a><br>
       <a href="/method">methods</a><br>
       <a href="/params?key=value&blank=&query=test&page=2">query parameters</a><br>
-      <a href="/418">regex route</a><br>
+      <a href="/regex/hello">regex route</a><br>
       <a href="/error">custom error</a><br>
       <a href="/index.html">static page</a><br>
     )"};
@@ -100,113 +104,140 @@ int main(int argc, char *argv[])
     ctx.res.set("content-type", "text/html");
 
     // set the http status code
-    ctx.res.result(200);
+    // the http status code can be either an integer or
+    // its respective enum representation
+    // the default status is 200 OK
+    ctx.res.result(Belle::Status::ok);
 
     // set the http body
-    ctx.res.body() = res;
+    ctx.res.body() = std::move(res);
   });
 
-  // handle route '/method'
+  // handle route ALL '/method'
   // matches all methods
   app.on_http("/method", [](Belle::Server::Http_Ctx& ctx)
   {
+  // get the request method type as a string
+    std::stringstream res; res
+    << "HTTP Method\n"
+    << "method: " << ctx.req.method_string() << "\n";
+
     // set http response headers
     ctx.res.set("content-type", "text/plain");
 
     // set the http status code
-    ctx.res.result(200);
-
-    // get the request method type
-    std::string method {ctx.req.method_string()};
+    ctx.res.result(Belle::Status::ok);
 
     // echo back the matched http method
-    ctx.res.body() = "Method: " + method + "\n";
+    ctx.res.body() = res.str();
   });
 
-  // handle route POST '/'
+  // handle route POST '/post'
+  // echo back the posted data
   app.on_http("/post", Belle::Method::post, [](Belle::Server::Http_Ctx& ctx)
   {
+    // get the request body data
+    std::stringstream res; res
+    << "Post Data\n"
+    << "Body: " << ctx.req.body() << "\n";
+
     // set http response headers
     ctx.res.set("content-type", "text/plain");
 
     // set the http status code
-    ctx.res.result(200);
+    ctx.res.result(Belle::Status::ok);
 
     // echo back the request body
-    ctx.res.body() = "Body: " + ctx.req.body() + "\n";
+    ctx.res.body() = res.str();
   });
 
-  // handle route GET '/params' with query parameters
-  // ex. http://localhost:8080/?q=test&page=2
+  // handle route GET '/params'
+  // with query parameters
+  // ex. http://localhost:8080/params?q=test&page=2
   app.on_http("/params", Belle::Method::get, [](Belle::Server::Http_Ctx& ctx)
   {
     // stringstream to hold the response
     std::stringstream res;
-    res << "Query Parameters:\n";
+    res << "Query Parameters\n";
 
     // access the query parameters
-    for (auto const& e : ctx.req.params())
+    for (auto const& [key, val] : ctx.req.params())
     {
       // add each key value pair to the response
-      res << e.first << " | " << e.second << "\n";
+      res << key << " | " << val << "\n";
     }
 
     // set http response headers
     ctx.res.set("content-type", "text/plain");
 
     // set the http status code
-    ctx.res.result(200);
+    ctx.res.result(Belle::Status::ok);
 
     // echo back the query parameters
     ctx.res.body() = res.str();
   });
 
-  // handle route GET '/<400-500 errors>' with query parameters
+  // handle route GET '/regex/([a-z]+)'
   // match a regex url
-  // ex. http://localhost:8080/404
-  app.on_http("^/([45]{1}[0-9]{2})$", Belle::Method::get, [](Belle::Server::Http_Ctx& ctx)
+  // one or more lowercase characters in the range of a-z
+  // ex. http://localhost:8080/regex/hello
+  // ex. http://localhost:8080/regex/belle
+  app.on_http("^/regex/([a-z]+)$", Belle::Method::get, [](Belle::Server::Http_Ctx& ctx)
   {
     // access the url regex capture groups
     // using req.url() which is a vector of strings
-    // index 0 contains the full matched url
+    // index 0 contains the matched url, minus any query parameters
     // index 1 to n contain the value of the capture groups if any
+    // the full url with query parameters is in req.target()
+    std::string url {ctx.req.url().at(0)};
     std::string match {ctx.req.url().at(1)};
+
+    // stringstream to hold the response
+    std::stringstream res; res
+    << "Regex Captures\n"
+    << "url:   " << url << "\n"
+    << "match: " << match << "\n";
 
     // set http response headers
     ctx.res.set("content-type", "text/plain");
 
     // set the http status code
-    ctx.res.result(200);
+    ctx.res.result(Belle::Status::ok);
 
     // echo back the captured url path
-    ctx.res.body() = "match: " + match;
+    ctx.res.body() = res.str();
   });
 
-  // handle an error
+  // trigger the custom error callback
   app.on_http("/error", Belle::Method::get, [](Belle::Server::Http_Ctx& ctx)
   {
-    // trigger the custom error callback
-    throw 500;
+    // the thrown value sets the http status code and
+    // calls the Belle::Server::on_http_error callback
+    // the http status code can be either an integer or
+    // its respective enum representation
+    throw Belle::Status::internal_server_error;
   });
 
   // set custom error callback
-  app.on_http_error([&](Belle::Server::Http_Ctx& ctx)
+  app.on_http_error([](Belle::Server::Http_Ctx& ctx)
   {
     // stringstream to hold the response
+    // get the http status code represented as an int and string
     std::stringstream res; res
+    << "Custom Error\n"
     << "Status: " << ctx.res.result_int() << "\n"
     << "Reason: " << ctx.res.result() << "\n";
 
     // set http response headers
     ctx.res.set("content-type", "text/plain");
 
-    // echo the http status code
+    // send the custom error response
     ctx.res.body() = res.str();
   });
 
   // set http connect callback
   // called at the beginning of every request
-  app.on_http_connect([&](Belle::Server::Http_Ctx& ctx)
+  app.on_http_connect([](Belle::Server::Http_Ctx& ctx)
   {
     // print notification
     std::cerr << "New Request!\n";
@@ -214,7 +245,7 @@ int main(int argc, char *argv[])
 
   // set http disconnect callback
   // called at the end of every request
-  app.on_http_disconnect([&](Belle::Server::Http_Ctx& ctx)
+  app.on_http_disconnect([](Belle::Server::Http_Ctx& ctx)
   {
     // access http request headers
     std::string ip {std::string(ctx.req["X-Real-IP"]).empty() ? "localhost" : ctx.req["X-Real-IP"]};
@@ -227,12 +258,19 @@ int main(int argc, char *argv[])
 
     // log output
     std::cerr
+    // the current timestamp
     << "[" << std::put_time(&tm, "%H:%M:%S %e %b %Y") << "] "
+    // the ip address
     << "[" << ip << "] "
+    // the http status code as an integer
     << "[" << ctx.res.result_int() << "] "
-    << "[" << ctx.req.method() << "] "
+    // the http method as a string
+    << "[" << ctx.req.method_string() << "] "
+    // the full request url as a string
     << "[" << ctx.req.target().to_string() << "] "
+    // the http referer header
     << "[" << rf << "] "
+    // the http user-agent header
     << "[" << ua << "]\n\n";
   });
 
@@ -242,10 +280,11 @@ int main(int argc, char *argv[])
   std::cout
   << "Server: " << address << ":" << port << "\n\n"
   << "Navigate to the following url:\n"
-  << "  http://127.0.0.1:8080/\n\n"
+  << "  http://" << address << ":" << port << "/\n\n"
   << "Try running the following commands:\n"
-  << "  curl -X PUT http://127.0.0.1:8080/method\n"
-  << "  curl -X POST --data 'post body message here' http://127.0.0.1:8080/post\n\n"
+  << "  curl -X PUT http://" << address << ":" << port << "/method\n"
+  << "  curl -X POST --data 'post body message here' http://"
+  << address << ":" << port << "/post\n\n"
   << "Begin Routes>\n\n"
   << http_routes(app.http_routes())
   << "Begin Log>\n\n";
