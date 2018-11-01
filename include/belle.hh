@@ -1673,7 +1673,7 @@ public:
     return _attr->http_dynamic;
   }
 
-  // set http
+  // set http static and dynamic
   Server& http(bool val_)
   {
     _attr->http_static = val_;
