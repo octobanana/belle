@@ -612,10 +612,6 @@ public:
 
   struct fns_on_websocket
   {
-    explicit fns_on_websocket()
-    {
-    }
-
     explicit fns_on_websocket(fn_on_websocket const& begin_,
       fn_on_websocket const& data_, fn_on_websocket const& end_) :
       begin {begin_},
