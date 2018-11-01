@@ -74,10 +74,10 @@ int main(int argc, char *argv[])
   app.signals({SIGINT, SIGTERM});
 
   // set the on signal callback
-  app.on_signal([&](auto ec, auto err)
+  app.on_signal([&](auto ec, auto sig)
   {
     // print out the signal received
-    std::cerr << "\nSignal " << err << "\n";
+    std::cerr << "\nSignal " << sig << "\n";
 
     // get the io_context and safely stop the server
     app.io().stop();

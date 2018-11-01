@@ -1734,9 +1734,9 @@ public:
     _on_signal = on_signal_;
 
     _signals.async_wait(
-      [this](error_code const& ec, int err)
+      [this](error_code const& ec, int sig)
       {
-        this->_on_signal(ec, err);
+        this->_on_signal(ec, sig);
       }
     );
 
