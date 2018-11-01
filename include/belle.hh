@@ -135,9 +135,9 @@ public:
 
   explicit Ordered_Map(std::initializer_list<std::pair<K, V>> const& lst)
   {
-    for (auto const& e : lst)
+    for (auto const& [key, val] : lst)
     {
-      _it.emplace_back(_map.insert({e.first, e.second}).first);
+      _it.emplace_back(_map.insert({key, val}).first);
     }
   }
 
@@ -1265,9 +1265,9 @@ private:
       std::regex_constants::match_flag_type const rx_flgs {std::regex_constants::match_not_null};
 
       // check for matching url
-      for (auto const& regex_callback : _attr->websocket_routes)
+      for (auto const& [regex, callback] : _attr->websocket_routes)
       {
-        std::regex rx_str {regex_callback.first, rx_opts};
+        std::regex rx_str {regex, rx_opts};
 
         if (std::regex_match(url_req, rx_match, rx_str, rx_flgs))
         {
@@ -1302,7 +1302,7 @@ private:
 
           // create websocket
           std::make_shared<Websocket>
-            (std::move(_socket), _attr, std::move(_ctx.req), regex_callback.second)
+            (std::move(_socket), _attr, std::move(_ctx.req), callback)
             ->do_accept();
 
           break;
