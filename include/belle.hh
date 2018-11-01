@@ -1148,6 +1148,10 @@ private:
             {
               return static_cast<int>(e);
             }
+            catch (Status const e)
+            {
+              return static_cast<int>(e);
+            }
             catch (std::exception const& e)
             {
               return 500;
@@ -1183,6 +1187,10 @@ private:
           _ctx.res.result(static_cast<unsigned int>(e));
         }
         catch (unsigned int const e)
+        {
+          _ctx.res.result(e);
+        }
+        catch (Status const e)
         {
           _ctx.res.result(e);
         }
