@@ -54,7 +54,7 @@ int main()
 ### Requirements
 * C++17 compiler
 * boost >= 1.67
-* cmake >= 3.5 (to build examples)
+* cmake >= 3.8 (to build examples)
 
 ### Dependencies
 * pthread (libpthread)
