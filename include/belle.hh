@@ -1632,15 +1632,15 @@ public:
   }
 
   // set the number of threads
-  Server& threads(int threads_)
+  Server& threads(unsigned int threads_)
   {
-    _threads = std::max<int>(1, threads_);
+    _threads = std::max<unsigned int>(1, threads_);
 
     return *this;
   }
 
   // get the number of threads
-  int threads()
+  unsigned int threads()
   {
     return _threads;
   }
@@ -1935,16 +1935,20 @@ public:
       (_io, tcp::endpoint(net::ip::make_address(_address), _port), _attr)
       ->run();
 
+    // thread pool
     std::vector<std::thread> io_threads;
+
+    // create and start threads if needed
     if (_threads > 1)
     {
       io_threads.reserve(static_cast<size_t>(_threads) - 1);
-      for (auto i = (_threads - 1); i > 0; --i)
+
+      for (unsigned int i = 1; i < _threads; ++i)
       {
         io_threads.emplace_back(
           [this]()
           {
-            // run the io context on the current thread
+            // run the io context on the new thread
             this->_io.run();
           }
         );
@@ -1973,7 +1977,7 @@ private:
   unsigned short _port {8080};
 
   // the number of threads to run on
-  int _threads {1};
+  unsigned int _threads {1};
 
   // the io context
   net::io_context _io {};
