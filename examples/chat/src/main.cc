@@ -202,11 +202,11 @@ int main(int argc, char *argv[])
   // total number of connected users
   int user_count {0};
 
-  // init some default channels
+  // add default chat room channels
   app.channels()["/"] = Belle::Server::Channel();
   app.channels()["/new"] = Belle::Server::Channel();
 
-  // add some default messages
+  // add default messages to the '/new' chat room
   chat["/new"].push("'/' shows an overview of the rooms");
   chat["/new"].push("'/<room_name>' go to an existing room or create a new one");
   chat["/new"].push("Try creating a new room called '/dev'");
@@ -216,8 +216,8 @@ int main(int argc, char *argv[])
 
   // handle ws connections to index room '/'
   app.on_websocket("/",
-  // on data function: called after every websocket read
-  [&](Belle::Server::Websocket_Ctx& ctx)
+  // on data: called after every websocket read
+  [](Belle::Server::Websocket_Ctx& ctx)
   {
     // register the route
     // data will be broadcasted in the websocket connect and disconnect handlers
@@ -225,33 +225,41 @@ int main(int argc, char *argv[])
 
   // handle ws connections to chat rooms '/<chat_room>'
   app.on_websocket("^(/[a-z]+)$",
-  // on begin function: called once after connected
+  // on begin: called once after connected
   [&](Belle::Server::Websocket_Ctx& ctx)
   {
+    // the Websocket automatically joins the channel named after the url on connect
+    // retrieve and store the url/channel name
+    std::string channel {ctx.req.url().at(0)};
+
     // broadcast the total number of connected users to the channel
-    ctx.channels.at(ctx.req.url().at(0)).broadcast("1" + std::to_string(ctx.channels.at(ctx.req.url().at(0)).size()));
+    ctx.channels.at(channel).broadcast("1" + std::to_string(ctx.channels.at(channel).size()));
 
     // check if there is any messages stored
-    if (chat.find(ctx.req.url().at(0)) != chat.end())
+    if (chat.find(channel) != chat.end())
     {
       // send out all previous messages to new user
-      for (auto const& e : chat[ctx.req.url().at(0)].get())
+      for (auto const& e : chat[channel].get())
       {
         ctx.send("0" + e);
       }
     }
 
     // send welcome message
-    ctx.send("0"s + "> welcome to "s + ctx.req.url().at(0));
+    ctx.send("0"s + "> welcome to "s + channel);
   },
 
-  // on data function: called after every websocket read
+  // on data: called after every websocket read
   [&](Belle::Server::Websocket_Ctx& ctx)
   {
     // a simple protocol:
     // in the received message,
     // the first character holds an int from 0-9,
     // the remaining characters are the message
+
+    // the Websocket automatically joins the channel named after the url on connect
+    // retrieve and store the url/channel name
+    std::string channel {ctx.req.url().at(0)};
 
     // get the message type
     int type {std::stoi(to_string(ctx.msg.at(0)))};
@@ -260,8 +268,8 @@ int main(int argc, char *argv[])
     switch (type)
     {
       case 0:
-      chat[ctx.req.url().at(0)].push(ctx.msg.substr(1));
-      ctx.channels.at(ctx.req.url().at(0)).broadcast("0" + ctx.msg.substr(1));
+      chat[channel].push(ctx.msg.substr(1));
+      ctx.channels.at(channel).broadcast("0" + ctx.msg.substr(1));
       break;
 
       default:
@@ -269,16 +277,20 @@ int main(int argc, char *argv[])
     }
   },
 
-  // on end function: called once after disconnected
-  [&](Belle::Server::Websocket_Ctx& ctx)
+  // on end: called once after disconnected
+  [](Belle::Server::Websocket_Ctx& ctx)
   {
+    // the Websocket automatically joins the channel named after the url on connect
+    // retrieve and store the url/channel name
+    std::string channel {ctx.req.url().at(0)};
+
     // a user has disconnected
     // broadcast the total number of connected users to the channel
-    ctx.channels.at(ctx.req.url().at(0))
-      .broadcast("1" + std::to_string(ctx.channels.at(ctx.req.url().at(0)).size()));
+    ctx.channels.at(channel).broadcast("1" + std::to_string(ctx.channels.at(channel).size()));
   }
   );
 
+  // set websocket connect callback
   // called once at the very beginning after connected
   app.on_websocket_connect([&](Belle::Server::Websocket_Ctx& ctx)
   {
@@ -296,6 +308,7 @@ int main(int argc, char *argv[])
     }
   });
 
+  // set websocket disconnect callback
   // called once at the very end after disconnected
   app.on_websocket_disconnect([&](Belle::Server::Websocket_Ctx& ctx)
   {
@@ -336,7 +349,7 @@ int main(int argc, char *argv[])
   });
 
   // set custom error callback
-  app.on_http_error([&](Belle::Server::Http_Ctx& ctx)
+  app.on_http_error([](Belle::Server::Http_Ctx& ctx)
   {
     // stringstream to hold the response
     std::stringstream res; res
@@ -358,6 +371,8 @@ int main(int argc, char *argv[])
 
   // start the server
   app.listen();
+
+  // the server blocks until a signal is received
 
   return 0;
 }
