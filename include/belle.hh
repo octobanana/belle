@@ -92,10 +92,7 @@ SOFTWARE.
 #include <type_traits>
 #include <thread>
 
-namespace OB
-{
-
-namespace Belle
+namespace OB::Belle
 {
 
 // aliases
@@ -1989,8 +1986,6 @@ private:
   fn_on_signal _on_signal {};
 }; // class Server
 
-} // namespace Belle
-
-} // namespace OB
+} // namespace OB::Belle
 
 #endif // OB_BELLE_HH
