@@ -112,7 +112,7 @@ using Headers = boost::beast::http::fields;
 // enables fast random lookup and insert ordered iterators
 // unordered map stores key value pairs
 // queue holds insert ordered iterators to each key in the unordered map
-template<class K, class V>
+template<typename K, typename V>
 class Ordered_Map
 {
 public:
@@ -554,7 +554,7 @@ public:
     Params _params {};
   }; // Http_Request
 
-  template<class Body>
+  template<typename Body>
   struct Http_Ctx_Basic
   {
     Http_Request req {};
