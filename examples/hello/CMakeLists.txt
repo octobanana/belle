@@ -52,6 +52,8 @@ add_executable (
 
 target_link_libraries (
   ${TARGET}
+  ssl
+  crypto
   pthread
   boost_system
 )

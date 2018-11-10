@@ -55,15 +55,33 @@ SOFTWARE.
 #define OB_BELLE_VERSION_MINOR 2
 #define OB_BELLE_VERSION_PATCH 2
 
+// Config Begin
+
+// compile with -DOB_BELLE_CONFIG_<OPT> or
+// comment out defines to alter the library
+
+// ssl support
+#ifndef OB_BELLE_CONFIG_SSL_OFF
+#define OB_BELLE_CONFIG_SSL_ON
+#endif
+
+// Config End
+
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 #include <boost/beast/websocket.hpp>
 
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/strand.hpp>
+#include <boost/asio/connect.hpp>
 #include <boost/asio/signal_set.hpp>
 #include <boost/asio/steady_timer.hpp>
 #include <boost/asio/bind_executor.hpp>
+
+#ifdef OB_BELLE_CONFIG_SSL_ON
+#include <boost/asio/ssl/error.hpp>
+#include <boost/asio/ssl/stream.hpp>
+#endif
 
 #include <boost/config.hpp>
 
@@ -101,6 +119,10 @@ namespace net = boost::asio;
 namespace beast = boost::beast;
 namespace http = boost::beast::http;
 namespace websocket = boost::beast::websocket;
+
+#ifdef OB_BELLE_CONFIG_SSL_ON
+namespace ssl = boost::asio::ssl;
+#endif
 
 using tcp = boost::asio::ip::tcp;
 using error_code = boost::system::error_code;
@@ -485,6 +507,61 @@ std::string mime_type(std::string const& path)
   return "application/octet-stream";
 }
 
+class Http_Request : public http::request<http::string_body>
+{
+  using Base = http::request<http::string_body>;
+  using Url = std::vector<std::string>;
+  using Params = std::unordered_multimap<std::string, std::string>;
+
+public:
+
+  Http_Request() :
+    Base {}
+  {
+  }
+
+  Http_Request(Http_Request&& rhs) noexcept :
+    Base {std::move(rhs)},
+    _url {std::move(rhs._url)},
+    _params {std::move(rhs._params)}
+  {
+  }
+
+  Http_Request& operator=(Http_Request&& rhs) noexcept
+  {
+    http::request<http::string_body>::operator=(std::move(rhs));
+    _url = std::move(rhs._url);
+    _params = std::move(rhs._params);
+
+    return *this;
+  }
+
+  Http_Request(Http_Request const&) = delete;
+  Http_Request& operator=(Http_Request const&) = delete;
+
+  ~Http_Request()
+  {
+  }
+
+  // get the url
+  Url& url()
+  {
+    return _url;
+  }
+
+  // get the url query parameters
+  Params& params()
+  {
+    return _params;
+  }
+
+private:
+
+  Url _url {};
+  Params _params {};
+}; // Http_Request
+
+
 class Server
 {
   // forward delcarations
@@ -531,29 +608,6 @@ public:
   }; // class Channel
 
   using Channels = std::unordered_map<std::string, Channel>;
-
-  class Http_Request : public http::request<http::string_body>
-  {
-    using Url = std::vector<std::string>;
-    using Params = std::unordered_multimap<std::string, std::string>;
-
-  public:
-
-    Url& url()
-    {
-      return _url;
-    }
-
-    Params& params()
-    {
-      return _params;
-    }
-
-  private:
-
-    Url _url {};
-    Params _params {};
-  }; // Http_Request
 
   template<typename Body>
   struct Http_Ctx_Basic
@@ -1986,6 +2040,669 @@ private:
   // callback for signals
   fn_on_signal _on_signal {};
 }; // class Server
+
+class Client
+{
+public:
+
+  struct Http_Ctx
+  {
+    Http_Request req {};
+    http::response<http::string_body> res {};
+    error_code ec {};
+  }; // struct Ctx_Http
+
+  // callbacks
+  using fn_on_http = std::function<void(Http_Ctx&)>;
+
+  struct Attr
+  {
+    // socket timeout
+    std::chrono::seconds timeout {10};
+
+#ifdef OB_BELLE_CONFIG_SSL_ON
+    // use ssl
+    bool ssl {false};
+
+    // the ssl context
+    ssl::context ssl_context {ssl::context::tlsv12_client};
+#endif
+
+    // the address to connect to
+    std::string address {"127.0.0.1"};
+
+    // the port to connect to
+    int port {8080};
+
+    // the path to connect to
+    std::string path {"/"};
+
+    // the request method
+    Method method {Method::get};
+
+    // http callback
+    fn_on_http on_http {};
+  }; // struct Attr
+
+  class Http : public std::enable_shared_from_this<Http>
+  {
+  public:
+
+    explicit Http(net::io_context& io_, Http_Request&& req_,
+      std::shared_ptr<Attr> attr_) :
+      _resolver {io_},
+      _socket {io_},
+      _strand {_socket.get_executor()},
+      _timer {io_, (std::chrono::steady_clock::time_point::max)()},
+      _ctx {std::move(req_)},
+      _attr {attr_}
+    {
+    }
+
+    ~Http()
+    {
+    }
+
+    void run()
+    {
+      // build target url from path and params
+      auto const url = [&]() {
+        std::string res {_attr->path};
+        if (! _ctx.req.params().empty())
+        {
+          res += "?";
+          auto it = _ctx.req.params().begin();
+          for (; it != _ctx.req.params().end(); ++it)
+          {
+            res += it->first + "=" + it->second + "&";
+          }
+          res.pop_back();
+        }
+        return res;
+      }();
+
+      _ctx.req.target(url);
+      _ctx.req.url().emplace_back(_attr->path);
+
+      // set default user-agent header value if not present
+      if (_ctx.req.find(Header::user_agent) == _ctx.req.end())
+      {
+        _ctx.req.set(Header::user_agent, "Belle");
+      }
+
+      // set the host header value
+      _ctx.req.set(Header::host, _attr->address);
+
+      // prepare the payload
+      _ctx.req.prepare_payload();
+
+      do_timer();
+      do_resolve();
+    }
+
+  private:
+
+    void do_timer()
+    {
+      // wait on the timer
+      _timer.async_wait(
+        net::bind_executor(_strand,
+          [self = shared_from_this()](error_code ec)
+          {
+            self->on_timer(ec);
+          }
+        )
+      );
+    }
+
+    void on_timer(error_code ec_)
+    {
+      if (ec_ && ec_ != net::error::operation_aborted)
+      {
+        return;
+      }
+
+      // check expiry
+      if (_timer.expiry() <= std::chrono::steady_clock::now())
+      {
+        do_close();
+
+        return;
+      }
+    }
+
+    void do_resolve()
+    {
+      _timer.expires_after(_attr->timeout);
+
+      // dns lookup
+      _resolver.async_resolve(_attr->address,
+        std::to_string(_attr->port),
+        net::bind_executor(_strand,
+          [self = shared_from_this()]
+          (error_code ec, tcp::resolver::results_type results)
+          {
+            self->on_resolve(ec, results);
+          }
+        )
+      );
+    }
+
+    void on_resolve(error_code ec_, tcp::resolver::results_type results_)
+    {
+      if (ec_)
+      {
+        return;
+      }
+
+      // connect to the endpoint
+      net::async_connect(_socket,
+        results_.begin(), results_.end(),
+        net::bind_executor(_strand,
+          [self = shared_from_this()](error_code ec, auto)
+          {
+            self->on_connect(ec);
+          }
+        )
+      );
+    }
+
+    void on_connect(error_code ec_)
+    {
+      if (ec_)
+      {
+        return;
+      }
+
+      do_write();
+    }
+
+    void do_write()
+    {
+      // Send the HTTP request
+      http::async_write(_socket,
+        static_cast<http::request<http::string_body>&>(_ctx.req),
+        net::bind_executor(_strand,
+          [self = shared_from_this()](error_code ec, std::size_t bytes)
+          {
+            self->on_write(ec, bytes);
+          }
+        )
+      );
+    }
+
+    void on_write(error_code ec_, std::size_t bytes_)
+    {
+      boost::ignore_unused(bytes_);
+
+      if (ec_)
+      {
+        return;
+      }
+
+      // Receive the HTTP response
+      http::async_read(_socket, _buf, _ctx.res,
+        net::bind_executor(_strand,
+          [self = shared_from_this()](error_code ec, std::size_t bytes)
+          {
+            self->on_read(ec, bytes);
+          }
+        )
+      );
+    }
+
+    void on_read(error_code ec_, std::size_t bytes_)
+    {
+      boost::ignore_unused(bytes_);
+
+      if (ec_)
+      {
+        return;
+      }
+
+      // run user function
+      _attr->on_http(_ctx);
+
+      do_close();
+    }
+
+    void do_close()
+    {
+      error_code ec;
+
+      // shutdown the socket
+      _socket.shutdown(tcp::socket::shutdown_both, ec);
+
+      // ignore not_connected error
+      if (ec && ec != boost::system::errc::not_connected)
+      {
+        return;
+      }
+
+      // the connection is now closed
+    }
+
+    tcp::resolver _resolver;
+    tcp::socket _socket;
+    net::strand<net::io_context::executor_type> _strand;
+    net::steady_timer _timer;
+    Http_Ctx _ctx {};
+    std::shared_ptr<Attr> _attr;
+    beast::flat_buffer _buf {};
+  }; // class Http
+
+#ifdef OB_BELLE_CONFIG_SSL_ON
+  class Https : public std::enable_shared_from_this<Https>
+  {
+  public:
+
+    explicit Https(net::io_context& io_, Http_Request&& req_,
+      std::shared_ptr<Attr> attr_) :
+      _resolver {io_},
+      _socket {io_, attr_->ssl_context},
+      _strand {_socket.get_executor()},
+      _timer {io_, (std::chrono::steady_clock::time_point::max)()},
+      _ctx {std::move(req_)},
+      _attr {attr_}
+    {
+    }
+
+    ~Https()
+    {
+      // run user function
+      _attr->on_http(_ctx);
+    }
+
+    void run()
+    {
+      // set server name indication
+      // use SSL_ctrl instead of SSL_set_tlsext_host_name macro
+      // to avoid old style C cast to char*
+      // if (! SSL_set_tlsext_host_name(_socket.native_handle(), _attr->address.data()))
+      if (! SSL_ctrl(_socket.native_handle(), SSL_CTRL_SET_TLSEXT_HOSTNAME, TLSEXT_NAMETYPE_host_name, _attr->address.data()))
+      {
+        error_code ec
+        {
+          static_cast<int>(ERR_get_error()),
+          net::error::get_ssl_category()
+        };
+
+        _ec  = ec;
+        return;
+      }
+
+      // build target url from path and params
+      auto const url = [&]() {
+        std::string res {_attr->path};
+        if (! _ctx.req.params().empty())
+        {
+          res += "?";
+          auto it = _ctx.req.params().begin();
+          for (; it != _ctx.req.params().end(); ++it)
+          {
+            res += it->first + "=" + it->second + "&";
+          }
+          res.pop_back();
+        }
+        return res;
+      }();
+
+      // set the url
+      _ctx.req.target(url);
+      _ctx.req.url().emplace_back(_attr->path);
+
+      // set default user-agent header value if not present
+      if (_ctx.req.find(Header::user_agent) == _ctx.req.end())
+      {
+        _ctx.req.set(Header::user_agent, "Belle");
+      }
+
+      // set the host header value
+      _ctx.req.set(Header::host, _attr->address);
+
+      // prepare the payload
+      _ctx.req.prepare_payload();
+
+      do_timer();
+      do_resolve();
+    }
+
+    void do_timer()
+    {
+      // wait on the timer
+      _timer.async_wait(
+        net::bind_executor(_strand,
+          [self = shared_from_this()](error_code ec)
+          {
+            self->on_timer(ec);
+          }
+        )
+      );
+    }
+
+    void on_timer(error_code ec_)
+    {
+      if (ec_ && ec_ != net::error::operation_aborted)
+      {
+        _ec  = ec_;
+        return;
+      }
+
+      // check expiry
+      if (_timer.expiry() <= std::chrono::steady_clock::now())
+      {
+        do_close();
+
+        return;
+      }
+
+      if (_close)
+      {
+        return;
+      }
+    }
+
+    void do_resolve()
+    {
+      _timer.expires_after(_attr->timeout);
+
+      // Look up the domain name
+      _resolver.async_resolve(_attr->address,
+        std::to_string(_attr->port),
+        net::bind_executor(_strand,
+          [self = shared_from_this()]
+          (error_code ec, tcp::resolver::results_type results)
+          {
+            self->on_resolve(ec, results);
+          }
+        )
+      );
+    }
+
+    void on_resolve(error_code ec_, tcp::resolver::results_type results_)
+    {
+      if (ec_)
+      {
+        _ec  = ec_;
+        return;
+      }
+
+      // connect to the endpoint
+      net::async_connect(_socket.next_layer(),
+        results_.begin(), results_.end(),
+        net::bind_executor(_strand,
+          [self = shared_from_this()](error_code ec, auto)
+          {
+            self->on_connect(ec);
+          }
+        )
+      );
+    }
+
+    void on_connect(error_code ec_)
+    {
+      if (ec_)
+      {
+        _ec  = ec_;
+        return;
+      }
+
+      // perform the ssl handshake
+      _socket.async_handshake(ssl::stream_base::client,
+        net::bind_executor(_strand,
+          [self = shared_from_this()](error_code ec)
+          {
+            self->on_handshake(ec);
+          }
+        )
+      );
+    }
+
+    void on_handshake(error_code ec_)
+    {
+      if (ec_)
+      {
+        _ec  = ec_;
+        return;
+      }
+
+      _close = false;
+
+      do_write();
+    }
+
+    void do_write()
+    {
+      // Send the HTTP request
+      http::async_write(_socket,
+        static_cast<http::request<http::string_body>&>(_ctx.req),
+        net::bind_executor(_strand,
+          [self = shared_from_this()](error_code ec, std::size_t bytes)
+          {
+            self->on_write(ec, bytes);
+          }
+        )
+      );
+    }
+
+    void on_write(error_code ec_, std::size_t bytes_)
+    {
+      boost::ignore_unused(bytes_);
+
+      if (ec_)
+      {
+        _ec  = ec_;
+        return;
+      }
+
+      // Receive the HTTP response
+      http::async_read(_socket, _buf, _ctx.res,
+        net::bind_executor(_strand,
+          [self = shared_from_this()](error_code ec, std::size_t bytes)
+          {
+            self->on_read(ec, bytes);
+          }
+        )
+      );
+    }
+
+    void on_read(error_code ec_, std::size_t bytes_)
+    {
+      boost::ignore_unused(bytes_);
+
+      if (ec_)
+      {
+        _ec  = ec_;
+        return;
+      }
+
+      do_close();
+    }
+
+    void do_close()
+    {
+      if (_close)
+      {
+        return;
+      }
+
+      _close = true;
+
+      // shutdown the socket
+      _socket.async_shutdown(
+        net::bind_executor(_strand,
+          [self = shared_from_this()](error_code ec)
+          {
+            self->on_shutdown(ec);
+          }
+        )
+      );
+    }
+
+    void on_shutdown(error_code ec_)
+    {
+      // ignore eof error
+      if (ec_ == net::error::eof)
+      {
+        ec_.assign(0, ec_.category());
+      }
+
+      // ignore not_connected error
+      if (ec_ && ec_ != boost::system::errc::not_connected)
+      {
+        _ec  = ec_;
+        return;
+      }
+
+      // the connection is now closed
+    }
+
+    tcp::resolver _resolver;
+    ssl::stream<tcp::socket> _socket;
+    net::strand<net::io_context::executor_type> _strand;
+    net::steady_timer _timer;
+    Http_Ctx _ctx {};
+    std::shared_ptr<Attr> _attr;
+    beast::flat_buffer _buf {};
+    error_code _ec {};
+    bool _close {true};
+  }; // class Https
+#endif
+
+  // default constructor
+  Client()
+  {
+  }
+
+  // destructor
+  ~Client()
+  {
+  }
+
+  // set the address to connect to
+  Client& address(std::string address_)
+  {
+    _attr->address = address_;
+
+    return *this;
+  }
+
+  // get the address to connect to
+  std::string address()
+  {
+    return _attr->address;
+  }
+
+  // set the port to connect to
+  Client& port(int port_)
+  {
+    _attr->port = port_;
+
+    return *this;
+  }
+
+  // get the port to connect to
+  int port()
+  {
+    return _attr->port;
+  }
+
+  // set the socket timeout
+  Client& timeout(std::chrono::seconds timeout_)
+  {
+    _attr->timeout = timeout_;
+
+    return *this;
+  }
+
+  // get the socket timeout
+  std::chrono::seconds timeout()
+  {
+    return _attr->timeout;
+  }
+
+  // get the io_context
+  net::io_context& io()
+  {
+    return _io;
+  }
+
+#ifdef OB_BELLE_CONFIG_SSL_ON
+  // set ssl
+  Client& ssl(bool ssl_)
+  {
+    _attr->ssl = ssl_;
+
+    return *this;
+  }
+
+  // get ssl
+  bool ssl()
+  {
+    return _attr->ssl;
+  }
+
+  // get the ssl context
+  ssl::context& ssl_context()
+  {
+    return _attr->ssl_context;
+  }
+
+  Client& ssl_context(ssl::context&& ctx_)
+  {
+    _attr->ssl_context = std::move(ctx_);
+
+    return *this;
+  }
+#endif
+
+  // get the request object
+  Http_Request& req()
+  {
+    return _req;
+  }
+
+  Client& on_http(std::string address_, unsigned short port_,
+    std::string path_, Method method_, fn_on_http on_http_)
+  {
+    _attr->address = address_;
+    _attr->port = port_;
+    _attr->path = path_;
+    _req.method(method_);
+    _attr->on_http = on_http_;
+
+    return *this;
+  }
+
+  void connect()
+  {
+#ifdef OB_BELLE_CONFIG_SSL_ON
+    if (_attr->ssl)
+    {
+      // use https
+      std::make_shared<Https>(_io, std::move(_req), _attr)->run();
+    }
+    else
+#endif
+    {
+      // use http
+      std::make_shared<Http>(_io, std::move(_req), _attr)->run();
+    }
+
+    _io.run();
+  }
+
+private:
+
+  // hold the client attributes
+  std::shared_ptr<Attr> _attr {std::make_shared<Attr>()};
+
+  // the http request object
+  Http_Request _req {};
+
+  // the io context
+  net::io_context _io {};
+}; // class Client
 
 } // namespace OB::Belle
 
