@@ -68,6 +68,7 @@ SOFTWARE.
 #include <boost/config.hpp>
 
 #include <cstdlib>
+#include <cstddef>
 #include <cstdint>
 #include <csignal>
 
@@ -154,12 +155,12 @@ public:
     return *this;
   }
 
-  i_iterator operator[](size_t index)
+  i_iterator operator[](std::size_t index)
   {
     return _it[index];
   }
 
-  i_const_iterator const operator[](size_t index) const
+  i_const_iterator const operator[](std::size_t index) const
   {
     return _it[index];
   }
@@ -184,7 +185,7 @@ public:
     return _map.find(k);
   }
 
-  size_t size() const
+  std::size_t size() const
   {
     return _it.size();
   }
@@ -296,7 +297,7 @@ namespace Detail
 std::string lowercase(std::string str);
 std::optional<std::string> extension(std::string const& path);
 std::vector<std::string> split(std::string const& str, std::string const& delim,
-  size_t size = std::numeric_limits<size_t>::max());
+  std::size_t size = std::numeric_limits<std::size_t>::max());
 
 // string to lowercase
 std::string lowercase(std::string str)
@@ -339,10 +340,10 @@ std::optional<std::string> extension(std::string const& path)
 
 // split a string by a delimiter 'n' times
 std::vector<std::string> split(std::string const& str, std::string const& delim,
-  size_t times)
+  std::size_t times)
 {
   std::vector<std::string> vtok;
-  size_t start {0};
+  std::size_t start {0};
   auto end = str.find(delim);
 
   while ((times-- > 0) && (end != std::string::npos))
@@ -519,7 +520,7 @@ public:
       }
     }
 
-    size_t size() const
+    std::size_t size() const
     {
       return _sessions.size();
     }
@@ -730,7 +731,7 @@ private:
       }
 
       _ws.async_write(net::buffer(*_que.front()),
-        [self = shared_from_this()](error_code ec, size_t bytes)
+        [self = shared_from_this()](error_code ec, std::size_t bytes)
         {
           self->on_write(ec, bytes);
         }
@@ -838,7 +839,7 @@ private:
     {
       _ws.async_read(_buf,
         net::bind_executor(_strand,
-          [self = shared_from_this()](error_code ec, size_t bytes)
+          [self = shared_from_this()](error_code ec, std::size_t bytes)
           {
             self->on_read(ec, bytes);
           }
@@ -917,7 +918,7 @@ private:
       }
 
       _ws.async_write(net::buffer(*_que.front()),
-        [self = shared_from_this()](error_code ec, size_t bytes)
+        [self = shared_from_this()](error_code ec, std::size_t bytes)
         {
           self->on_write(ec, bytes);
         }
@@ -988,7 +989,7 @@ private:
       http::async_write(self->_socket, *ptr,
         net::bind_executor(self->_strand,
           [self, close = ptr->need_eof()]
-          (error_code ec, size_t bytes)
+          (error_code ec, std::size_t bytes)
           {
             self->on_write(ec, bytes, close);
           }
@@ -1354,7 +1355,7 @@ private:
 
       http::async_read(_socket, _buf, _ctx.req,
         net::bind_executor(_strand,
-          [self = shared_from_this()](error_code ec, size_t bytes)
+          [self = shared_from_this()](error_code ec, std::size_t bytes)
           {
             self->on_read(ec, bytes);
           }
@@ -1362,7 +1363,7 @@ private:
       );
     }
 
-    void on_read(error_code ec_, size_t bytes_)
+    void on_read(error_code ec_, std::size_t bytes_)
     {
       boost::ignore_unused(bytes_);
 
@@ -1425,7 +1426,7 @@ private:
       }
     }
 
-    void on_write(error_code ec_, size_t bytes_, bool close_)
+    void on_write(error_code ec_, std::size_t bytes_, bool close_)
     {
       boost::ignore_unused(bytes_);
 
@@ -1938,7 +1939,7 @@ public:
     // create and start threads if needed
     if (_threads > 1)
     {
-      io_threads.reserve(static_cast<size_t>(_threads) - 1);
+      io_threads.reserve(static_cast<std::size_t>(_threads) - 1);
 
       for (unsigned int i = 1; i < _threads; ++i)
       {
