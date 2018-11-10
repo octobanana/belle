@@ -678,7 +678,7 @@ private:
 
   public:
 
-    explicit Websocket(tcp::socket socket_, std::shared_ptr<Attr> attr_,
+    explicit Websocket(tcp::socket socket_, std::shared_ptr<Attr> const attr_,
       Http_Request&& req_, fns_on_websocket const& on_websocket_) :
       _ws {std::move(socket_)},
       _attr {attr_},
@@ -945,7 +945,7 @@ private:
     }
 
     websocket::stream<tcp::socket> _ws;
-    std::shared_ptr<Attr> _attr;
+    std::shared_ptr<Attr> const _attr;
     Websocket_Ctx _ctx;
     fns_on_websocket const& _on_websocket;
     net::strand<net::io_context::executor_type> _strand;
@@ -958,7 +958,7 @@ private:
   {
   public:
 
-    explicit Http(tcp::socket socket_, std::shared_ptr<Attr> attr_) :
+    explicit Http(tcp::socket socket_, std::shared_ptr<Attr> const attr_) :
       _socket {std::move(socket_)},
       _strand {_socket.get_executor()},
       _timer {_socket.get_executor().context(), (std::chrono::steady_clock::time_point::max)()},
@@ -1469,7 +1469,7 @@ private:
     net::strand<net::io_context::executor_type> _strand;
     net::steady_timer _timer;
     boost::beast::flat_buffer _buf;
-    std::shared_ptr<Attr> _attr;
+    std::shared_ptr<Attr> const _attr;
     Http_Ctx _ctx {};
     std::shared_ptr<void> _res {nullptr};
   }; // class Http
@@ -1478,7 +1478,7 @@ private:
   {
   public:
 
-    explicit Listener(net::io_context& io_, tcp::endpoint endpoint_, std::shared_ptr<Attr> attr_) :
+    explicit Listener(net::io_context& io_, tcp::endpoint endpoint_, std::shared_ptr<Attr> const attr_) :
       _acceptor {io_},
       _socket {io_},
       _attr {attr_}
@@ -1562,7 +1562,7 @@ private:
 
     tcp::acceptor _acceptor;
     tcp::socket _socket;
-    std::shared_ptr<Attr> _attr;
+    std::shared_ptr<Attr> const _attr;
   }; // class Listener
 
 public:
@@ -1966,7 +1966,7 @@ public:
 private:
 
   // hold the server attributes shared by each socket connection
-  std::shared_ptr<Attr> _attr {std::make_shared<Attr>()};
+  std::shared_ptr<Attr> const _attr {std::make_shared<Attr>()};
 
   // the address to listen on
   std::string _address {"127.0.0.1"};
