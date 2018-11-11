@@ -5,8 +5,8 @@ Belle enables C++ programs to communicate asynchronously over HTTP and Websocket
 It aims to have an intuitive API, reasonable defaults, and great performance.
 
 ## A Brief Tour
-The following is a basic HTTP server listening on 127.0.0.1:8080
-that responds to a GET request to '/'.
+An HTTP server listening on 127.0.0.1:8080
+that responds to a GET request to the path '/'.
 ```cpp
 #include "belle.hh"
 namespace Belle = OB::Belle;
@@ -38,13 +38,13 @@ int main()
 
 ## About
 Belle is a single header C++17 library for working with HTTP and Websockets.
-It utilizes the HTTP and Websocket functionality from Boost.Beast,
-along with the asynchronous networking from Boost.ASIO.
+It utilizes the HTTP and Websocket functionalities of Boost.Beast,
+along with the asynchronous networking capabilities of Boost.ASIO.
 
 ### Features
 * HTTP 1.0 / 1.1 server
+* HTTP 1.0 client
 * Websocket server
-* Intuitive API
 * Serve static content
 * Serve dynamic content
 * Use lambdas as route handlers
@@ -53,34 +53,53 @@ along with the asynchronous networking from Boost.ASIO.
 * URL query parameters are automatically parsed
 * Handle HTTP and Websocket requests on the same port
 * Group Websocket connections into channels for broadcasting
-* Multithreaded (only for HTTP server)
+* Multithreaded HTTP server
 
 ### Future Features
-* Chunked encoding support
-* Add SSL / TLS support
+* Add HTTP 1.1 client support
+* Add an async Websocket client
+* Add SSL / TLS server support
+* add Websocket ping, pong, and timeout
 * Add an interface for a custom logger
-* Add an async and sync HTTP / Websocket clients
-* Add a generic TCP interface with callbacks
-* Take greater advantage of Boost.Beast
+* Chunked encoding support
+* Request and response streaming support
+* Add a generic TCP interface
 * General optimizations to improve performance
 
 ## Install
 Belle is a single header file.
 It can either be installed into your systems include directory,
-or copied directly into your projects folder.  
-The default install location is `/usr/local/include/ob/belle.hh`.  
-Run the install script:  
-`$ ./install.sh`
+or copied directly into your projects folder.
+
+The default install location is `/usr/local/include/ob/belle.hh`.
+
+To install on your system:
+```
+$ ./install.sh
+```
+
+To copy to your project:
+```
+$ cp ./include/belle.hh ./<project>
+```
 
 ## Build
 ### Requirements
 * C++17 compiler
-* boost >= 1.67
-* cmake >= 3.8 (to build examples)
+* Boost >= 1.67
+* OpenSSL >= 1.1.0 (if SSL is enabled)
+* CMake >= 3.8 (to build examples)
 
 ### Dependencies
+* ssl (libssl)
+* crypto (libcrypto)
 * pthread (libpthread)
 * boost (libboost_system)
+
+### Flags
+Use the following define flags at compile time to alter the library:
+* -D OB_BELLE_CONFIG_SSL_OFF
+  * Disable SSL support
 
 ### Usage
 If Belle is installed on your system:
@@ -100,8 +119,10 @@ Make sure to link the dependencies, along with meeting the requirements listed a
 ## Documentation
 The source code contains helpful comments and explanations.
 
-Basic documentation can be generated using Doxygen:  
-`$ doxygen ./.doxyfile`
+Basic documentation can be generated using Doxygen:
+```
+$ doxygen ./.doxyfile
+```
 
 ## Examples
 
