@@ -63,7 +63,17 @@ SOFTWARE.
 // ssl support
 #ifndef OB_BELLE_CONFIG_SSL_OFF
 #define OB_BELLE_CONFIG_SSL_ON
-#endif
+#endif // OB_BELLE_CONFIG_SSL_OFF
+
+// client support
+#ifndef OB_BELLE_CONFIG_CLIENT_OFF
+#define OB_BELLE_CONFIG_CLIENT_ON
+#endif // OB_BELLE_CONFIG_CLIENT_OFF
+
+// server support
+#ifndef OB_BELLE_CONFIG_SERVER_OFF
+#define OB_BELLE_CONFIG_SERVER_ON
+#endif // OB_BELLE_CONFIG_SERVER_OFF
 
 // Config End
 
@@ -73,15 +83,18 @@ SOFTWARE.
 
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/strand.hpp>
-#include <boost/asio/connect.hpp>
 #include <boost/asio/signal_set.hpp>
 #include <boost/asio/steady_timer.hpp>
 #include <boost/asio/bind_executor.hpp>
 
+#ifdef OB_BELLE_CONFIG_CLIENT_ON
+#include <boost/asio/connect.hpp>
+#endif // OB_BELLE_CONFIG_CLIENT_ON
+
 #ifdef OB_BELLE_CONFIG_SSL_ON
 #include <boost/asio/ssl/error.hpp>
 #include <boost/asio/ssl/stream.hpp>
-#endif
+#endif // OB_BELLE_CONFIG_SSL_ON
 
 #include <boost/config.hpp>
 
@@ -123,7 +136,7 @@ namespace websocket = boost::beast::websocket;
 
 #ifdef OB_BELLE_CONFIG_SSL_ON
 namespace ssl = boost::asio::ssl;
-#endif
+#endif // OB_BELLE_CONFIG_SSL_ON
 
 using tcp = boost::asio::ip::tcp;
 using error_code = boost::system::error_code;
@@ -711,6 +724,7 @@ private:
 }; // Http_Request
 
 
+#ifdef OB_BELLE_CONFIG_SERVER_ON
 class Server
 {
   // forward delcarations
@@ -2152,7 +2166,9 @@ private:
   // callback for signals
   fn_on_signal _on_signal {};
 }; // class Server
+#endif // OB_BELLE_CONFIG_SERVER_ON
 
+#ifdef OB_BELLE_CONFIG_CLIENT_ON
 class Client
 {
 public:
@@ -2193,7 +2209,7 @@ public:
 
     // ssl context
     ssl::context ssl_context {ssl::context::tlsv12_client};
-#endif
+#endif // OB_BELLE_CONFIG_SSL_ON
 
     // socket timeout
     std::chrono::seconds timeout {10};
@@ -2638,7 +2654,7 @@ public:
 
     ssl::stream<tcp::socket> _socket;
   }; // class Https
-#endif
+#endif // OB_BELLE_CONFIG_SSL_ON
 
   // default constructor
   explicit Client()
@@ -2754,7 +2770,7 @@ public:
 
     return *this;
   }
-#endif
+#endif // OB_BELLE_CONFIG_SSL_ON
 
   Client& on_http(Http_Request& req_, fn_on_http on_http_)
   {
@@ -2805,7 +2821,7 @@ public:
       std::make_shared<Https>(_io, _attr)->run();
     }
     else
-#endif
+#endif // OB_BELLE_CONFIG_SSL_ON
     {
       // use http
       std::make_shared<Http>(_io, _attr)->run();
@@ -2842,6 +2858,7 @@ private:
   // timeout all requests after specified number of milliseconds
   std::chrono::milliseconds _timeout_max {0};
 }; // class Client
+#endif // OB_BELLE_CONFIG_CLIENT_ON
 
 } // namespace OB::Belle
 
