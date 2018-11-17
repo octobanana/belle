@@ -546,7 +546,7 @@ public:
   // default deconstructor
   ~Http_Request() = default;
 
-  Http_Request&& move()
+  Http_Request&& move() noexcept
   {
     return std::move(*this);
   }
