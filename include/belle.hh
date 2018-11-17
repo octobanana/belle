@@ -585,6 +585,43 @@ public:
     target(url);
   }
 
+  // parse target params
+  void params_parse()
+  {
+    std::string url {target().to_string()};
+
+    // separate the url query params
+    auto params = Detail::split(url, "?", 1);
+
+    // set params
+    if (params.size() == 2)
+    {
+      auto kv = Detail::split(params.at(1), "&");
+
+      for (auto const& e : kv)
+      {
+        if (e.empty())
+        {
+          continue;
+        }
+
+        auto k_v = Detail::split(e, "=", 1);
+
+        if (k_v.size() == 1)
+        {
+          _params.emplace(e, "");
+        }
+
+        else if (k_v.size() == 2)
+        {
+          _params.emplace(k_v.at(0), k_v.at(1));
+        }
+
+        continue;
+      }
+    }
+  }
+
 private:
 
   Url _url {};
