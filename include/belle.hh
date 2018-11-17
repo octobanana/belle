@@ -405,7 +405,7 @@ std::string to_string(T const& t)
 
 } // namespace Detail
 
-static std::unordered_map<std::string, std::string> const mime_types
+std::unordered_map<std::string, std::string> const mime_types
 {
   {"html", "text/html"},
   {"htm", "text/html"},
