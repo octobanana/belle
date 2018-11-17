@@ -563,6 +563,28 @@ public:
     return _params;
   }
 
+  // serialize target and params
+  void params_serialize()
+  {
+    std::string url {target().to_string()};
+
+    _url.clear();
+    _url.emplace_back(url);
+
+    if (! _params.empty())
+    {
+      url += "?";
+      auto it = _params.begin();
+      for (; it != _params.end(); ++it)
+      {
+        url += it->first + "=" + it->second + "&";
+      }
+      url.pop_back();
+    }
+
+    target(url);
+  }
+
 private:
 
   Url _url {};
