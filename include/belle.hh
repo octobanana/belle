@@ -525,31 +525,26 @@ class Http_Request : public http::request<http::string_body>
 
 public:
 
+  // inherit base constructors
   using http::request<http::string_body>::message;
 
-  explicit Http_Request(Http_Request&& rhs) noexcept :
-    Base {std::move(rhs)},
-    _url {std::move(rhs._url)},
-    _params {std::move(rhs._params)}
-  {
-  }
+  // default constructor
+  Http_Request() = default;
 
-  Http_Request& operator=(Http_Request&& rhs) noexcept
-  {
-    http::request<http::string_body>::operator=(std::move(rhs));
-    _url = std::move(rhs._url);
-    _params = std::move(rhs._params);
+  // copy constructor
+  Http_Request(Http_Request const&) = default;
 
-    return *this;
-  }
+  // move constructor
+  Http_Request(Http_Request&&) = default;
 
-  Http_Request(Http_Request const&) = delete;
+  // copy assignment
+  Http_Request& operator=(Http_Request const&) = default;
 
-  Http_Request& operator=(Http_Request const&) = delete;
+  // move assignment
+  Http_Request& operator=(Http_Request&& rhs) = default;
 
-  ~Http_Request()
-  {
-  }
+  // default deconstructor
+  ~Http_Request() = default;
 
   Http_Request&& move()
   {
