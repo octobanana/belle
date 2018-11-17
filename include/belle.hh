@@ -1483,7 +1483,7 @@ private:
         return;
       }
 
-      // check if socket has been upgraded
+      // check if socket has been upgraded or closed
       if (_timer.expires_at() == (std::chrono::steady_clock::time_point::min)())
       {
         return;
@@ -1620,6 +1620,9 @@ private:
       // send a tcp shutdown
       error_code ec;
       _socket.shutdown(tcp::socket::shutdown_send, ec);
+
+      // set the timer to expire immediately
+      _timer.expires_at((std::chrono::steady_clock::time_point::min)());
 
       if (ec)
       {
