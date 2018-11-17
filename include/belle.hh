@@ -2160,7 +2160,7 @@ public:
   struct Http_Ctx
   {
     // http request
-    Http_Request* req {};
+    Http_Request* req {nullptr};
 
     // http response
     http::response<http::string_body> res {};
@@ -2211,37 +2211,40 @@ public:
     fn_on_http_error on_http_error {};
   }; // struct Attr
 
-  class Http : public std::enable_shared_from_this<Http>
+  template<typename Derived>
+  class Http_Base
   {
+    Derived& derived()
+    {
+      return static_cast<Derived&>(*this);
+    }
+
   public:
 
-    explicit Http(net::io_context& io_, std::shared_ptr<Attr> attr_) :
+    Http_Base(net::io_context& io_, std::shared_ptr<Attr> attr_) :
       _resolver {io_},
-      _socket {io_},
-      _strand {_socket.get_executor()},
+      _strand {io_.get_executor()},
       _timer {io_, (std::chrono::steady_clock::time_point::max)()},
       _attr {attr_}
     {
     }
 
-    ~Http()
+    ~Http_Base()
     {
     }
 
-    void run()
+    void cancel_timer()
     {
-      do_timer();
-      do_resolve();
+      // set the timer to expire immediately
+      _timer.expires_at((std::chrono::steady_clock::time_point::min)());
     }
-
-  private:
 
     void do_timer()
     {
       // wait on the timer
       _timer.async_wait(
         net::bind_executor(_strand,
-          [self = shared_from_this()](error_code ec)
+          [self = derived().shared_from_this()](error_code ec)
           {
             self->on_timer(ec);
           }
@@ -2267,280 +2270,7 @@ public:
       // check expiry
       if (_timer.expiry() <= std::chrono::steady_clock::now())
       {
-        do_close();
-
-        return;
-      }
-    }
-
-    void do_resolve()
-    {
-      _timer.expires_after(_attr->timeout);
-
-      // domain name server lookup
-      _resolver.async_resolve(_attr->address,
-        Detail::to_string(_attr->port),
-        net::bind_executor(_strand,
-          [self = shared_from_this()]
-          (error_code ec, tcp::resolver::results_type results)
-          {
-            self->on_resolve(ec, results);
-          }
-        )
-      );
-    }
-
-    void on_resolve(error_code ec_, tcp::resolver::results_type results_)
-    {
-      if (ec_)
-      {
-        // set the timer to expire immediately
-        _timer.expires_at((std::chrono::steady_clock::time_point::min)());
-        Error_Ctx err {ec_};
-        _attr->on_http_error(err);
-        return;
-      }
-
-      // connect to the endpoint
-      net::async_connect(_socket,
-        results_.begin(), results_.end(),
-        net::bind_executor(_strand,
-          [self = shared_from_this()](error_code ec, auto)
-          {
-            self->on_connect(ec);
-          }
-        )
-      );
-    }
-
-    void on_connect(error_code ec_)
-    {
-      if (ec_)
-      {
-        // set the timer to expire immediately
-        _timer.expires_at((std::chrono::steady_clock::time_point::min)());
-        Error_Ctx err {ec_};
-        _attr->on_http_error(err);
-        return;
-      }
-
-      do_write();
-    }
-
-    void prepare_request()
-    {
-      _ctx = {};
-      _ctx.req = &_attr->que.front().req;
-
-      // build target url from path and params
-      _ctx.req->url().emplace_back(_ctx.req->target());
-      auto const url = [&]() {
-        std::string res {_ctx.req->target()};
-        if (! _ctx.req->params().empty())
-        {
-          res += "?";
-          auto it = _ctx.req->params().begin();
-          for (; it != _ctx.req->params().end(); ++it)
-          {
-            res += it->first + "=" + it->second + "&";
-          }
-          res.pop_back();
-        }
-        return res;
-      }();
-      _ctx.req->target(url);
-
-      // set default user-agent header value if not present
-      if (_ctx.req->find(Header::user_agent) == _ctx.req->end())
-      {
-        _ctx.req->set(Header::user_agent, "Belle");
-      }
-
-      // set default host header value if not present
-      if (_ctx.req->find(Header::host) == _ctx.req->end())
-      {
-        _ctx.req->set(Header::host, _attr->address);
-      }
-
-      // set connection close if last request in the queue
-      if (_attr->que.size() == 1)
-      {
-        _ctx.req->keep_alive(false);
-      }
-
-      // prepare the payload
-      _ctx.req->prepare_payload();
-    }
-
-    void do_write()
-    {
-      prepare_request();
-
-      _timer.expires_after(_attr->timeout);
-
-      // Send the HTTP request
-      http::async_write(_socket, *_ctx.req,
-        net::bind_executor(_strand,
-          [self = shared_from_this()](error_code ec, std::size_t bytes)
-          {
-            self->on_write(ec, bytes);
-          }
-        )
-      );
-    }
-
-    void on_write(error_code ec_, std::size_t bytes_)
-    {
-      boost::ignore_unused(bytes_);
-
-      if (ec_)
-      {
-        // set the timer to expire immediately
-        _timer.expires_at((std::chrono::steady_clock::time_point::min)());
-        Error_Ctx err {ec_};
-        _attr->on_http_error(err);
-        return;
-      }
-
-      // Receive the HTTP response
-      http::async_read(_socket, _buf, _ctx.res,
-        net::bind_executor(_strand,
-          [self = shared_from_this()](error_code ec, std::size_t bytes)
-          {
-            self->on_read(ec, bytes);
-          }
-        )
-      );
-    }
-
-    void on_read(error_code ec_, std::size_t bytes_)
-    {
-      boost::ignore_unused(bytes_);
-
-      if (ec_)
-      {
-        // set the timer to expire immediately
-        _timer.expires_at((std::chrono::steady_clock::time_point::min)());
-        Error_Ctx err {ec_};
-        _attr->on_http_error(err);
-        return;
-      }
-
-      // run user function
-      _attr->que.front().on_http(_ctx);
-
-      // remove request from queue
-      _attr->que.pop_front();
-
-      if (_attr->que.empty())
-      {
-        do_close();
-      }
-      else
-      {
-        do_write();
-      }
-    }
-
-    void do_close()
-    {
-      error_code ec;
-
-      // shutdown the socket
-      _socket.shutdown(tcp::socket::shutdown_both, ec);
-      _socket.close(ec);
-
-      // ignore not_connected error
-      if (ec && ec != boost::system::errc::not_connected)
-      {
-        // set the timer to expire immediately
-        _timer.expires_at((std::chrono::steady_clock::time_point::min)());
-        Error_Ctx err {ec};
-        _attr->on_http_error(err);
-        return;
-      }
-
-      // the connection is now closed
-    }
-
-    tcp::resolver _resolver;
-    tcp::socket _socket;
-    net::strand<net::io_context::executor_type> _strand;
-    net::steady_timer _timer;
-    std::shared_ptr<Attr> _attr;
-    Http_Ctx _ctx {};
-    beast::flat_buffer _buf {};
-  }; // class Http
-
-#ifdef OB_BELLE_CONFIG_SSL_ON
-  class Https : public std::enable_shared_from_this<Https>
-  {
-  public:
-
-    explicit Https(net::io_context& io_, std::shared_ptr<Attr> attr_) :
-      _resolver {io_},
-      _socket {io_, attr_->ssl_context},
-      _strand {_socket.get_executor()},
-      _timer {io_, (std::chrono::steady_clock::time_point::max)()},
-      _attr {attr_}
-    {
-    }
-
-    ~Https()
-    {
-    }
-
-    void run()
-    {
-      // set server name indication
-      // use SSL_ctrl instead of SSL_set_tlsext_host_name macro
-      // to avoid old style C cast to char*
-      // if (! SSL_set_tlsext_host_name(_socket.native_handle(), _attr->address.data()))
-      if (! SSL_ctrl(_socket.native_handle(), SSL_CTRL_SET_TLSEXT_HOSTNAME, TLSEXT_NAMETYPE_host_name, _attr->address.data()))
-      {
-        error_code ec
-        {
-          static_cast<int>(ERR_get_error()),
-          net::error::get_ssl_category()
-        };
-
-        return;
-      }
-
-      do_timer();
-      do_resolve();
-    }
-
-    void do_timer()
-    {
-      // wait on the timer
-      _timer.async_wait(
-        net::bind_executor(_strand,
-          [self = shared_from_this()](error_code ec)
-          {
-            self->on_timer(ec);
-          }
-        )
-      );
-    }
-
-    void on_timer(error_code ec_)
-    {
-      if (ec_ && ec_ != net::error::operation_aborted)
-      {
-        return;
-      }
-
-      // check if socket has been closed
-      if (_timer.expires_at() == (std::chrono::steady_clock::time_point::min)())
-      {
-        return;
-      }
-
-      // check expiry
-      if (_timer.expiry() <= std::chrono::steady_clock::now())
-      {
-        do_close();
+        derived().do_close();
 
         return;
       }
@@ -2559,7 +2289,7 @@ public:
       _resolver.async_resolve(_attr->address,
         Detail::to_string(_attr->port),
         net::bind_executor(_strand,
-          [self = shared_from_this()]
+          [self = derived().shared_from_this()]
           (error_code ec, tcp::resolver::results_type results)
           {
             self->on_resolve(ec, results);
@@ -2572,49 +2302,22 @@ public:
     {
       if (ec_)
       {
+        cancel_timer();
+        Error_Ctx err {ec_};
+        _attr->on_http_error(err);
         return;
       }
 
       // connect to the endpoint
-      net::async_connect(_socket.next_layer(),
+      net::async_connect(derived().socket().lowest_layer(),
         results_.begin(), results_.end(),
         net::bind_executor(_strand,
-          [self = shared_from_this()](error_code ec, auto)
+          [self = derived().shared_from_this()](error_code ec, auto)
           {
-            self->on_connect(ec);
+            self->derived().on_connect(ec);
           }
         )
       );
-    }
-
-    void on_connect(error_code ec_)
-    {
-      if (ec_)
-      {
-        return;
-      }
-
-      // perform the ssl handshake
-      _socket.async_handshake(ssl::stream_base::client,
-        net::bind_executor(_strand,
-          [self = shared_from_this()](error_code ec)
-          {
-            self->on_handshake(ec);
-          }
-        )
-      );
-    }
-
-    void on_handshake(error_code ec_)
-    {
-      if (ec_)
-      {
-        return;
-      }
-
-      _close = false;
-
-      do_write();
     }
 
     void prepare_request()
@@ -2622,23 +2325,8 @@ public:
       _ctx = {};
       _ctx.req = &_attr->que.front().req;
 
-      // build target url from path and params
-      _ctx.req->url().emplace_back(_ctx.req->target());
-      auto const url = [&]() {
-        std::string res {_ctx.req->target()};
-        if (! _ctx.req->params().empty())
-        {
-          res += "?";
-          auto it = _ctx.req->params().begin();
-          for (; it != _ctx.req->params().end(); ++it)
-          {
-            res += it->first + "=" + it->second + "&";
-          }
-          res.pop_back();
-        }
-        return res;
-      }();
-      _ctx.req->target(url);
+      // serialize target and params
+      _ctx.req->params_serialize();
 
       // set default user-agent header value if not present
       if (_ctx.req->find(Header::user_agent) == _ctx.req->end())
@@ -2669,9 +2357,9 @@ public:
       _timer.expires_after(_attr->timeout);
 
       // Send the HTTP request
-      http::async_write(_socket, *_ctx.req,
+      http::async_write(derived().socket(), *_ctx.req,
         net::bind_executor(_strand,
-          [self = shared_from_this()](error_code ec, std::size_t bytes)
+          [self = derived().shared_from_this()](error_code ec, std::size_t bytes)
           {
             self->on_write(ec, bytes);
           }
@@ -2685,13 +2373,21 @@ public:
 
       if (ec_)
       {
+        cancel_timer();
+        Error_Ctx err {ec_};
+        _attr->on_http_error(err);
         return;
       }
 
+      do_read();
+    }
+
+    void do_read()
+    {
       // Receive the HTTP response
-      http::async_read(_socket, _buf, _ctx.res,
+      http::async_read(derived().socket(), _buf, _ctx.res,
         net::bind_executor(_strand,
-          [self = shared_from_this()](error_code ec, std::size_t bytes)
+          [self = derived().shared_from_this()](error_code ec, std::size_t bytes)
           {
             self->on_read(ec, bytes);
           }
@@ -2705,6 +2401,9 @@ public:
 
       if (ec_)
       {
+        cancel_timer();
+        Error_Ctx err {ec_};
+        _attr->on_http_error(err);
         return;
       }
 
@@ -2716,12 +2415,175 @@ public:
 
       if (_attr->que.empty())
       {
-        do_close();
+        derived().do_close();
       }
       else
       {
         do_write();
       }
+    }
+
+    tcp::resolver _resolver;
+    net::strand<net::io_context::executor_type> _strand;
+    net::steady_timer _timer;
+    std::shared_ptr<Attr> _attr;
+    Http_Ctx _ctx {};
+    beast::flat_buffer _buf {};
+    bool _close {false};
+  }; // class Http_Base
+
+  class Http :
+    public Http_Base<Http>,
+    public std::enable_shared_from_this<Http>
+  {
+  public:
+    Http(net::io_context& io_, std::shared_ptr<Attr> attr_) :
+      Http_Base<Http>(io_, attr_),
+      _socket {io_}
+    {
+    }
+
+    ~Http()
+    {
+    }
+
+    tcp::socket& socket()
+    {
+      return _socket;
+    }
+
+    void run()
+    {
+      do_timer();
+      do_resolve();
+    }
+
+    void on_connect(error_code ec_)
+    {
+      if (ec_)
+      {
+        cancel_timer();
+        Error_Ctx err {ec_};
+        _attr->on_http_error(err);
+        return;
+      }
+
+      do_write();
+    }
+
+    void do_close()
+    {
+      error_code ec;
+
+      // shutdown the socket
+      _socket.shutdown(tcp::socket::shutdown_both, ec);
+      _socket.close(ec);
+
+      // ignore not_connected error
+      if (ec && ec != boost::system::errc::not_connected)
+      {
+        cancel_timer();
+        Error_Ctx err {ec};
+        _attr->on_http_error(err);
+        return;
+      }
+
+      // the connection is now closed
+    }
+
+
+  private:
+
+    tcp::socket _socket;
+  }; // class Http
+
+#ifdef OB_BELLE_CONFIG_SSL_ON
+  class Https :
+    public Http_Base<Https>,
+    public std::enable_shared_from_this<Https>
+  {
+  public:
+    Https(net::io_context& io_, std::shared_ptr<Attr> attr_) :
+      Http_Base<Https>(io_, attr_),
+      _socket {io_, attr_->ssl_context}
+    {
+      _close = true;
+    }
+
+    ~Https()
+    {
+    }
+
+    ssl::stream<tcp::socket>& socket()
+    {
+      return _socket;
+    }
+
+    void run()
+    {
+      // start the timer
+      do_timer();
+
+      // set server name indication
+      // use SSL_ctrl instead of SSL_set_tlsext_host_name macro
+      // to avoid old style C cast to char*
+      // if (! SSL_set_tlsext_host_name(_socket.native_handle(), _attr->address.data()))
+      if (! SSL_ctrl(_socket.native_handle(), SSL_CTRL_SET_TLSEXT_HOSTNAME, TLSEXT_NAMETYPE_host_name, _attr->address.data()))
+      {
+        error_code ec
+        {
+          static_cast<int>(ERR_get_error()),
+          net::error::get_ssl_category()
+        };
+
+        cancel_timer();
+        Error_Ctx err {ec};
+        _attr->on_http_error(err);
+        return;
+      }
+
+      do_resolve();
+    }
+
+    void on_connect(error_code ec_)
+    {
+      if (ec_)
+      {
+        cancel_timer();
+        Error_Ctx err {ec_};
+        _attr->on_http_error(err);
+        return;
+      }
+
+      do_handshake();
+    }
+
+    void do_handshake()
+    {
+      // perform the ssl handshake
+      _socket.async_handshake(ssl::stream_base::client,
+        net::bind_executor(_strand,
+          [self = shared_from_this()](error_code ec)
+          {
+            self->on_handshake(ec);
+          }
+        )
+      );
+    }
+
+    void on_handshake(error_code ec_)
+    {
+      if (ec_)
+      {
+        cancel_timer();
+        Error_Ctx err {ec_};
+        _attr->on_http_error(err);
+        return;
+      }
+
+      _close = false;
+
+      do_write();
     }
 
     void do_close()
@@ -2746,8 +2608,7 @@ public:
 
     void on_shutdown(error_code ec_)
     {
-      // set the timer to expire immediately
-      _timer.expires_at((std::chrono::steady_clock::time_point::min)());
+      cancel_timer();
 
       // ignore eof error
       if (ec_ == net::error::eof)
@@ -2761,6 +2622,7 @@ public:
         return;
       }
 
+      // close the socket
       _socket.next_layer().close(ec_);
 
       // ignore not_connected error
@@ -2772,14 +2634,9 @@ public:
       // the connection is now closed
     }
 
-    tcp::resolver _resolver;
+  private:
+
     ssl::stream<tcp::socket> _socket;
-    net::strand<net::io_context::executor_type> _strand;
-    net::steady_timer _timer;
-    Http_Ctx _ctx {};
-    std::shared_ptr<Attr> _attr;
-    beast::flat_buffer _buf {};
-    bool _close {true};
   }; // class Https
 #endif
 
@@ -2899,6 +2756,15 @@ public:
   }
 #endif
 
+  Client& on_http(Http_Request& req_, fn_on_http on_http_)
+  {
+    _attr->que.emplace_back(Req_Ctx());
+    _attr->que.back().req = req_;
+    _attr->que.back().on_http = on_http_;
+
+    return *this;
+  }
+
   Client& on_http(Http_Request&& req_, fn_on_http on_http_)
   {
     _attr->que.emplace_back(Req_Ctx());
@@ -2908,11 +2774,11 @@ public:
     return *this;
   }
 
-  Client& on_http(std::string route_, Method method_, fn_on_http on_http_)
+  Client& on_http(std::string route_, fn_on_http on_http_)
   {
     _attr->que.emplace_back(Req_Ctx());
     _attr->que.back().req.target(route_);
-    _attr->que.back().req.method(method_);
+    _attr->que.back().req.method(Method::get);
     _attr->que.back().on_http = on_http_;
 
     return *this;
