@@ -43,7 +43,7 @@ along with the asynchronous networking capabilities of Boost.ASIO.
 
 ### Features
 * HTTP 1.0 / 1.1 server
-* HTTP 1.0 client
+* HTTP 1.0 / 1.1 client
 * Websocket server
 * Serve static content
 * Serve dynamic content
@@ -100,6 +100,10 @@ $ cp ./include/belle.hh ./<project>
 Use the following define flags at compile time to alter the library:
 * -D OB_BELLE_CONFIG_SSL_OFF
   * Disable SSL support
+* -D OB_BELLE_CONFIG_CLIENT_OFF
+  * Disable client support
+* -D OB_BELLE_CONFIG_SERVER_OFF
+  * Disable server support
 
 ### Usage
 If Belle is installed on your system:
