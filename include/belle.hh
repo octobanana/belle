@@ -163,11 +163,11 @@ public:
   using i_const_iterator = typename std::deque<m_const_iterator>::const_iterator;
 
 
-  explicit Ordered_Map()
+  Ordered_Map()
   {
   }
 
-  explicit Ordered_Map(std::initializer_list<std::pair<K, V>> const& lst)
+  Ordered_Map(std::initializer_list<std::pair<K, V>> const& lst)
   {
     for (auto const& [key, val] : lst)
     {
@@ -738,7 +738,7 @@ public:
   {
   public:
 
-    explicit Channel()
+    Channel()
     {
     }
 
@@ -788,7 +788,7 @@ public:
 
   public:
 
-    explicit Websocket_Ctx(Websocket& ws_, Http_Request&& req_,
+    Websocket_Ctx(Websocket& ws_, Http_Request&& req_,
       Channels& channels_) :
       ws {&ws_},
       req {std::move(req_)},
@@ -827,7 +827,7 @@ public:
 
   struct fns_on_websocket
   {
-    explicit fns_on_websocket(fn_on_websocket const& begin_,
+    fns_on_websocket(fn_on_websocket const& begin_,
       fn_on_websocket const& data_, fn_on_websocket const& end_) :
       begin {begin_},
       data {data_},
@@ -895,7 +895,7 @@ private:
 
   public:
 
-    explicit Websocket(tcp::socket socket_, std::shared_ptr<Attr> const attr_,
+    Websocket(tcp::socket socket_, std::shared_ptr<Attr> const attr_,
       Http_Request&& req_, fns_on_websocket const& on_websocket_) :
       _ws {std::move(socket_)},
       _attr {attr_},
@@ -1175,7 +1175,7 @@ private:
   {
   public:
 
-    explicit Http(tcp::socket socket_, std::shared_ptr<Attr> const attr_) :
+    Http(tcp::socket socket_, std::shared_ptr<Attr> const attr_) :
       _socket {std::move(socket_)},
       _strand {_socket.get_executor()},
       _timer {_socket.get_executor().context(), (std::chrono::steady_clock::time_point::max)()},
@@ -1658,7 +1658,7 @@ private:
   {
   public:
 
-    explicit Listener(net::io_context& io_, tcp::endpoint endpoint_, std::shared_ptr<Attr> const attr_) :
+    Listener(net::io_context& io_, tcp::endpoint endpoint_, std::shared_ptr<Attr> const attr_) :
       _acceptor {io_},
       _socket {io_},
       _attr {attr_}
@@ -1748,7 +1748,7 @@ private:
 public:
 
   // default constructor
-  explicit Server()
+  Server()
   {
   }
 
@@ -2657,12 +2657,12 @@ public:
 #endif // OB_BELLE_CONFIG_SSL_ON
 
   // default constructor
-  explicit Client()
+  Client()
   {
   }
 
   // constructor with address, port, and ssl
-  explicit Client(std::string address_, unsigned short port_,
+  Client(std::string address_, unsigned short port_,
     bool ssl_ = false)
   {
     _attr->address = address_;
