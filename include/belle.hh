@@ -1272,8 +1272,8 @@ private:
       std::string url_req {_ctx.req.target().to_string()};
 
       // separate the url query params
-      auto url_params = Detail::split(url_req, "?", 1);
-      url_req = url_params.at(0);
+      auto params = Detail::split(url_req, "?", 1);
+      url_req = params.at(0);
 
       // iterate over routes
       for (auto const& regex_method : _attr->http_routes)
@@ -1306,28 +1306,8 @@ private:
               _ctx.req.url().emplace_back(e.str());
             }
 
-            // set params
-            if (url_params.size() == 2)
-            {
-              auto kv = Detail::split(url_params.at(1), "&");
-
-              for (auto const& e : kv)
-              {
-                auto k_v = Detail::split(e, "=", 1);
-
-                if (k_v.empty())
-                {
-                  _ctx.req.params().emplace(e, "");
-                }
-
-                else if (k_v.size() == 2)
-                {
-                  _ctx.req.params().emplace(k_v.at(0), k_v.at(1));
-                }
-
-                continue;
-              }
-            }
+            // parse target params
+            _ctx.req.params_parse();
 
             // set callback function
             auto const& user_func = match->second;
@@ -1461,8 +1441,8 @@ private:
       std::string url_req {_ctx.req.target().to_string()};
 
       // separate the url query params
-      auto url_params = Detail::split(url_req, "?", 1);
-      url_req = url_params.at(0);
+      auto params = Detail::split(url_req, "?", 1);
+      url_req = params.at(0);
 
       // regex variables
       std::smatch rx_match {};
@@ -1482,28 +1462,8 @@ private:
             _ctx.req.url().emplace_back(e.str());
           }
 
-          // set params
-          if (url_params.size() == 2)
-          {
-            auto kv = Detail::split(url_params.at(1), "&");
-
-            for (auto const& e : kv)
-            {
-              auto k_v = Detail::split(e, "=", 1);
-
-              if (k_v.empty())
-              {
-                _ctx.req.params().emplace(e, "");
-              }
-
-              else if (k_v.size() == 2)
-              {
-                _ctx.req.params().emplace(k_v.at(0), k_v.at(1));
-              }
-
-              continue;
-            }
-          }
+          // parse target params
+          _ctx.req.params_parse();
 
           // create websocket
           std::make_shared<Websocket>
