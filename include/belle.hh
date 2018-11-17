@@ -330,13 +330,13 @@ namespace Detail
 {
 
 // prototypes
-std::string lowercase(std::string str);
-std::optional<std::string> extension(std::string const& path);
-std::vector<std::string> split(std::string const& str, std::string const& delim,
+inline std::string lowercase(std::string str);
+inline std::optional<std::string> extension(std::string const& path);
+inline std::vector<std::string> split(std::string const& str, std::string const& delim,
   std::size_t size = std::numeric_limits<std::size_t>::max());
 
 // string to lowercase
-std::string lowercase(std::string str)
+inline std::string lowercase(std::string str)
 {
   auto const to_lower = [](char& c)
   {
@@ -357,7 +357,7 @@ std::string lowercase(std::string str)
 }
 
 // find extension if present in a string path
-std::optional<std::string> extension(std::string const& path)
+inline std::optional<std::string> extension(std::string const& path)
 {
   if (path.empty() || path.size() < 2)
   {
@@ -375,7 +375,7 @@ std::optional<std::string> extension(std::string const& path)
 }
 
 // split a string by a delimiter 'n' times
-std::vector<std::string> split(std::string const& str, std::string const& delim,
+inline std::vector<std::string> split(std::string const& str, std::string const& delim,
   std::size_t times)
 {
   std::vector<std::string> vtok;
@@ -395,7 +395,7 @@ std::vector<std::string> split(std::string const& str, std::string const& delim,
 
 // convert object into a string
 template<typename T>
-std::string to_string(T const& t)
+inline std::string to_string(T const& t)
 {
   std::stringstream ss;
   ss << t;
@@ -513,10 +513,10 @@ std::unordered_map<std::string, std::string> const mime_types
 };
 
 // prototypes
-std::string mime_type(std::string const& path);
+inline std::string mime_type(std::string const& path);
 
 // find the mime type of a string path
-std::string mime_type(std::string const& path)
+inline std::string mime_type(std::string const& path)
 {
   if (auto ext = Detail::extension(path))
   {
