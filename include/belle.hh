@@ -85,6 +85,7 @@ SOFTWARE.
 
 #include <boost/config.hpp>
 
+#include <cctype>
 #include <cstdlib>
 #include <cstddef>
 #include <cstdint>
@@ -577,7 +578,7 @@ public:
       auto it = _params.begin();
       for (; it != _params.end(); ++it)
       {
-        url += it->first + "=" + it->second + "&";
+        url += url_encode(it->first) + "=" + url_encode(it->second) + "&";
       }
       url.pop_back();
     }
@@ -609,12 +610,12 @@ public:
 
         if (k_v.size() == 1)
         {
-          _params.emplace(e, "");
+          _params.emplace(url_decode(e), "");
         }
 
         else if (k_v.size() == 2)
         {
-          _params.emplace(k_v.at(0), k_v.at(1));
+          _params.emplace(url_decode(k_v.at(0)), url_decode(k_v.at(1)));
         }
 
         continue;
@@ -623,6 +624,87 @@ public:
   }
 
 private:
+
+  inline std::string hex_encode(char const c)
+  {
+    char s[3];
+
+    if (c & 0x80)
+    {
+      std::snprintf(&s[0], 3, "%02X",
+        static_cast<unsigned int>(c & 0xff)
+      );
+    }
+    else
+    {
+      std::snprintf(&s[0], 3, "%02X",
+        static_cast<unsigned int>(c)
+      );
+    }
+
+    return std::string(s);
+  }
+
+  inline char hex_decode(std::string const& s)
+  {
+    unsigned int n;
+
+    std::sscanf(s.data(), "%x", &n);
+
+    return static_cast<char>(n);
+  }
+
+  std::string url_encode(std::string const& str)
+  {
+    std::string res;
+    res.reserve(str.size());
+
+    for (auto const& e : str)
+    {
+      if (e == ' ')
+      {
+        res += "+";
+      }
+      else if (std::isalnum(static_cast<unsigned char>(e)) ||
+        e == '-' || e == '_' || e == '.' || e == '~')
+      {
+        res += e;
+      }
+      else
+      {
+        res += "%" + hex_encode(e);
+      }
+    }
+
+    return res;
+  }
+
+  std::string url_decode(std::string const& str)
+  {
+    std::string res;
+    res.reserve(str.size());
+
+    for (std::size_t i = 0; i < str.size(); ++i)
+    {
+      if (str[i] == '+')
+      {
+        res += " ";
+      }
+      else if (str[i] == '%' && i + 2 < str.size() &&
+        std::isxdigit(static_cast<unsigned char>(str[i + 1])) &&
+        std::isxdigit(static_cast<unsigned char>(str[i + 2])))
+      {
+        res += hex_decode(str.substr(i + 1, 2));
+        i += 2;
+      }
+      else
+      {
+        res += str[i];
+      }
+    }
+
+    return res;
+  }
 
   Url _url {};
   Params _params {};
