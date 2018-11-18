@@ -1,6 +1,6 @@
 // belle chat example
 
-#include "../../../include/belle.hh"
+#include "belle.hh"
 namespace Belle = OB::Belle;
 
 #include <ctime>

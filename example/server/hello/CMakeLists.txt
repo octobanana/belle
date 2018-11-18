@@ -35,6 +35,7 @@ message ("CMAKE_BUILD_TYPE is ${CMAKE_BUILD_TYPE}")
 include_directories(
   ./
   ./src
+  ../../../include
 )
 
 set (SOURCES
