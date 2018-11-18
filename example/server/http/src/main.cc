@@ -9,6 +9,7 @@ namespace Belle = OB::Belle;
 #include <sstream>
 #include <iomanip>
 #include <iostream>
+#include <mutex>
 
 // prototypes
 std::string http_routes(Belle::Server::Http_Routes& routes);
@@ -62,6 +63,9 @@ int main(int argc, char *argv[])
   // the websocket channel implementation is not thread safe
   // default value is true
   app.websocket(false);
+
+  // mutex for iostream
+  std::mutex io_mutex;
 
   // enable serving static files from a public directory
   // if the path is relative, make sure to run the program
@@ -237,15 +241,18 @@ int main(int argc, char *argv[])
 
   // set http connect callback
   // called at the beginning of every request
-  app.on_http_connect([](Belle::Server::Http_Ctx& ctx)
+  app.on_http_connect([&io_mutex](Belle::Server::Http_Ctx& ctx)
   {
-    // print notification
-    std::cerr << "New Request!\n";
+    // acquire lock
+    std::scoped_lock lock {io_mutex};
+
+    // print http request headers
+    std::cerr << ctx.req.base();
   });
 
   // set http disconnect callback
   // called at the end of every request
-  app.on_http_disconnect([](Belle::Server::Http_Ctx& ctx)
+  app.on_http_disconnect([&io_mutex](Belle::Server::Http_Ctx& ctx)
   {
     // access http request headers
     std::string ip {std::string(ctx.req["X-Real-IP"]).empty() ? "localhost" : ctx.req["X-Real-IP"]};
@@ -255,6 +262,9 @@ int main(int argc, char *argv[])
     // get the current time
     std::time_t t {std::time(nullptr)};
     std::tm tm {*std::localtime(&t)};
+
+    // acquire lock
+    std::scoped_lock lock {io_mutex};
 
     // log output
     std::cerr
