@@ -182,24 +182,24 @@ int main(int argc, char *argv[])
   });
 
   // handle route GET '/regex/([a-z]+)'
-  // match a regex url
+  // match a regex path
   // one or more lowercase characters in the range of a-z
   // ex. http://localhost:8080/regex/hello
   // ex. http://localhost:8080/regex/belle
   app.on_http("^/regex/([a-z]+)$", Belle::Method::get, [](Belle::Server::Http_Ctx& ctx)
   {
-    // access the url regex capture groups
-    // using req.url() which is a vector of strings
-    // index 0 contains the matched url, minus any query parameters
+    // access the path regex capture groups
+    // using req.path() which is a vector of strings
+    // index 0 contains the matched path, minus any query parameters
     // index 1 to n contain the value of the capture groups if any
-    // the full url with query parameters is in req.target()
-    std::string url {ctx.req.url().at(0)};
-    std::string match {ctx.req.url().at(1)};
+    // the full path with query parameters is in req.target()
+    std::string path {ctx.req.path().at(0)};
+    std::string match {ctx.req.path().at(1)};
 
     // stringstream to hold the response
     std::stringstream res; res
     << "Regex Captures\n"
-    << "url:   " << url << "\n"
+    << "path:   " << path << "\n"
     << "match: " << match << "\n";
 
     // set http response headers
@@ -208,7 +208,7 @@ int main(int argc, char *argv[])
     // set the http status code
     ctx.res.result(Belle::Status::ok);
 
-    // echo back the captured url path
+    // echo back the captured path parameter
     ctx.res.body() = res.str();
   });
 
@@ -276,7 +276,7 @@ int main(int argc, char *argv[])
     << "[" << ctx.res.result_int() << "] "
     // the http method as a string
     << "[" << ctx.req.method_string() << "] "
-    // the full request url as a string
+    // the full request path as a string
     << "[" << ctx.req.target().to_string() << "] "
     // the http referer header
     << "[" << rf << "] "

@@ -534,7 +534,7 @@ inline std::string mime_type(std::string const& path)
 class Request : public http::request<http::string_body>
 {
   using Base = http::request<http::string_body>;
-  using Url = std::vector<std::string>;
+  using Path = std::vector<std::string>;
   using Params = std::unordered_multimap<std::string, std::string>;
 
 public:
@@ -565,47 +565,47 @@ public:
     return std::move(*this);
   }
 
-  // get the url
-  Url& url()
+  // get the path
+  Path& path()
   {
-    return _url;
+    return _path;
   }
 
-  // get the url query parameters
+  // get the query parameters
   Params& params()
   {
     return _params;
   }
 
-  // serialize target and params
+  // serialize path and query parameters to the target
   void params_serialize()
   {
-    std::string url {target().to_string()};
+    std::string path {target().to_string()};
 
-    _url.clear();
-    _url.emplace_back(url);
+    _path.clear();
+    _path.emplace_back(path);
 
     if (! _params.empty())
     {
-      url += "?";
+      path += "?";
       auto it = _params.begin();
       for (; it != _params.end(); ++it)
       {
-        url += url_encode(it->first) + "=" + url_encode(it->second) + "&";
+        path += url_encode(it->first) + "=" + url_encode(it->second) + "&";
       }
-      url.pop_back();
+      path.pop_back();
     }
 
-    target(url);
+    target(path);
   }
 
-  // parse target params
+  // parse the query parameters from the target
   void params_parse()
   {
-    std::string url {target().to_string()};
+    std::string path {target().to_string()};
 
-    // separate the url query params
-    auto params = Detail::split(url, "?", 1);
+    // separate the query params
+    auto params = Detail::split(path, "?", 1);
 
     // set params
     if (params.size() == 2)
@@ -719,7 +719,7 @@ private:
     return res;
   }
 
-  Url _url {};
+  Path _path {};
   Params _params {};
 }; // Request
 
@@ -908,7 +908,7 @@ private:
     ~Websocket()
     {
       // leave channel
-      _attr->channels.at(_ctx.req.url().at(0)).leave(*this);
+      _attr->channels.at(_ctx.req.path().at(0)).leave(*this);
 
       if (_on_websocket.end)
       {
@@ -1012,11 +1012,11 @@ private:
       }
 
       // join channel
-      if (_attr->channels.find(_ctx.req.url().at(0)) == _attr->channels.end())
+      if (_attr->channels.find(_ctx.req.path().at(0)) == _attr->channels.end())
       {
-        _attr->channels[_ctx.req.url().at(0)] = Channel();
+        _attr->channels[_ctx.req.path().at(0)] = Channel();
       }
-      _attr->channels.at(_ctx.req.url().at(0)).join(*this);
+      _attr->channels.at(_ctx.req.path().at(0)).join(*this);
 
       if (_attr->on_websocket_connect)
       {
@@ -1282,12 +1282,12 @@ private:
       std::regex_constants::syntax_option_type const rx_opts {std::regex::ECMAScript};
       std::regex_constants::match_flag_type const rx_flgs {std::regex_constants::match_not_null};
 
-      // the request url string
-      std::string url_req {_ctx.req.target().to_string()};
+      // the request path
+      std::string path {_ctx.req.target().to_string()};
 
-      // separate the url query params
-      auto params = Detail::split(url_req, "?", 1);
-      url_req = params.at(0);
+      // separate the query parameters
+      auto params = Detail::split(path, "?", 1);
+      path = params.at(0);
 
       // iterate over routes
       for (auto const& regex_method : _attr->http_routes)
@@ -1312,12 +1312,12 @@ private:
         if (method_match)
         {
           std::regex rx_str {(*regex_method).first, rx_opts};
-          if (std::regex_match(url_req, rx_match, rx_str, rx_flgs))
+          if (std::regex_match(path, rx_match, rx_str, rx_flgs))
           {
-            // set the url
+            // set the path
             for (auto const& e : rx_match)
             {
-              _ctx.req.url().emplace_back(e.str());
+              _ctx.req.path().emplace_back(e.str());
             }
 
             // parse target params
@@ -1451,29 +1451,29 @@ private:
       // set the timer to expire immediately
       _timer.expires_at((std::chrono::steady_clock::time_point::min)());
 
-      // the request url string
-      std::string url_req {_ctx.req.target().to_string()};
+      // the request path
+      std::string path {_ctx.req.target().to_string()};
 
-      // separate the url query params
-      auto params = Detail::split(url_req, "?", 1);
-      url_req = params.at(0);
+      // separate the query parameters
+      auto params = Detail::split(path, "?", 1);
+      path = params.at(0);
 
       // regex variables
       std::smatch rx_match {};
       std::regex_constants::syntax_option_type const rx_opts {std::regex::ECMAScript};
       std::regex_constants::match_flag_type const rx_flgs {std::regex_constants::match_not_null};
 
-      // check for matching url
+      // check for matching route
       for (auto const& [regex, callback] : _attr->websocket_routes)
       {
         std::regex rx_str {regex, rx_opts};
 
-        if (std::regex_match(url_req, rx_match, rx_str, rx_flgs))
+        if (std::regex_match(path, rx_match, rx_str, rx_flgs))
         {
-          // set the url
+          // set the path
           for (auto const& e : rx_match)
           {
-            _ctx.req.url().emplace_back(e.str());
+            _ctx.req.path().emplace_back(e.str());
           }
 
           // parse target params

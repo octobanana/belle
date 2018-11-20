@@ -228,9 +228,9 @@ int main(int argc, char *argv[])
   // on begin: called once after connected
   [&](Belle::Server::Websocket_Ctx& ctx)
   {
-    // the Websocket automatically joins the channel named after the url on connect
-    // retrieve and store the url/channel name
-    std::string channel {ctx.req.url().at(0)};
+    // the Websocket automatically joins the channel named after the path on connect
+    // retrieve and store the path/channel name
+    std::string channel {ctx.req.path().at(0)};
 
     // broadcast the total number of connected users to the channel
     ctx.channels.at(channel).broadcast("1" + std::to_string(ctx.channels.at(channel).size()));
@@ -257,9 +257,9 @@ int main(int argc, char *argv[])
     // the first character holds an int from 0-9,
     // the remaining characters are the message
 
-    // the Websocket automatically joins the channel named after the url on connect
-    // retrieve and store the url/channel name
-    std::string channel {ctx.req.url().at(0)};
+    // the Websocket automatically joins the channel named after the path on connect
+    // retrieve and store the path/channel name
+    std::string channel {ctx.req.path().at(0)};
 
     // get the message type
     int type {std::stoi(to_string(ctx.msg.at(0)))};
@@ -280,9 +280,9 @@ int main(int argc, char *argv[])
   // on end: called once after disconnected
   [](Belle::Server::Websocket_Ctx& ctx)
   {
-    // the Websocket automatically joins the channel named after the url on connect
-    // retrieve and store the url/channel name
-    std::string channel {ctx.req.url().at(0)};
+    // the Websocket automatically joins the channel named after the path on connect
+    // retrieve and store the path/channel name
+    std::string channel {ctx.req.path().at(0)};
 
     // a user has disconnected
     // broadcast the total number of connected users to the channel
