@@ -531,7 +531,7 @@ inline std::string mime_type(std::string const& path)
   return "application/octet-stream";
 }
 
-class Http_Request : public http::request<http::string_body>
+class Request : public http::request<http::string_body>
 {
   using Base = http::request<http::string_body>;
   using Url = std::vector<std::string>;
@@ -543,24 +543,24 @@ public:
   using http::request<http::string_body>::message;
 
   // default constructor
-  Http_Request() = default;
+  Request() = default;
 
   // copy constructor
-  Http_Request(Http_Request const&) = default;
+  Request(Request const&) = default;
 
   // move constructor
-  Http_Request(Http_Request&&) = default;
+  Request(Request&&) = default;
 
   // copy assignment
-  Http_Request& operator=(Http_Request const&) = default;
+  Request& operator=(Request const&) = default;
 
   // move assignment
-  Http_Request& operator=(Http_Request&& rhs) = default;
+  Request& operator=(Request&& rhs) = default;
 
   // default deconstructor
-  ~Http_Request() = default;
+  ~Request() = default;
 
-  Http_Request&& move() noexcept
+  Request&& move() noexcept
   {
     return std::move(*this);
   }
@@ -721,7 +721,7 @@ private:
 
   Url _url {};
   Params _params {};
-}; // Http_Request
+}; // Request
 
 
 #ifdef OB_BELLE_CONFIG_SERVER_ON
@@ -775,7 +775,7 @@ public:
   template<typename Body>
   struct Http_Ctx_Basic
   {
-    Http_Request req {};
+    Request req {};
     http::response<Body> res {};
     std::shared_ptr<void> data {nullptr};
   }; // class Http_Ctx_Basic
@@ -788,7 +788,7 @@ public:
 
   public:
 
-    Websocket_Ctx(Websocket& ws_, Http_Request&& req_,
+    Websocket_Ctx(Websocket& ws_, Request&& req_,
       Channels& channels_) :
       ws {&ws_},
       req {std::move(req_)},
@@ -814,7 +814,7 @@ public:
     }
 
     Websocket* ws;
-    Http_Request req;
+    Request req;
     Channels& channels;
     std::string msg {};
     std::shared_ptr<void> data {nullptr};
@@ -896,7 +896,7 @@ private:
   public:
 
     Websocket(tcp::socket socket_, std::shared_ptr<Attr> const attr_,
-      Http_Request&& req_, fns_on_websocket const& on_websocket_) :
+      Request&& req_, fns_on_websocket const& on_websocket_) :
       _ws {std::move(socket_)},
       _attr {attr_},
       _ctx {*this, std::move(req_), _attr->channels},
@@ -2176,7 +2176,7 @@ public:
   struct Http_Ctx
   {
     // http request
-    Http_Request* req {nullptr};
+    Request* req {nullptr};
 
     // http response
     http::response<http::string_body> res {};
@@ -2195,7 +2195,7 @@ public:
   struct Req_Ctx
   {
     // http request object
-    Http_Request req {};
+    Request req {};
 
     // http callback
     fn_on_http on_http {};
@@ -2781,7 +2781,7 @@ public:
   }
 #endif // OB_BELLE_CONFIG_SSL_ON
 
-  Client& on_http(Http_Request& req_, fn_on_http on_http_)
+  Client& on_http(Request const& req_, fn_on_http on_http_)
   {
     _attr->que.emplace_back(Req_Ctx());
     _attr->que.back().req = req_;
@@ -2790,7 +2790,7 @@ public:
     return *this;
   }
 
-  Client& on_http(Http_Request&& req_, fn_on_http on_http_)
+  Client& on_http(Request&& req_, fn_on_http on_http_)
   {
     _attr->que.emplace_back(Req_Ctx());
     _attr->que.back().req = std::move(req_);
