@@ -2661,14 +2661,23 @@ public:
   {
   }
 
+  // constructor with address and port
+  Client(std::string address_, unsigned short port_)
+  {
+    _attr->address = address_;
+    _attr->port = port_;
+  }
+
+#ifdef OB_BELLE_CONFIG_SSL_ON
   // constructor with address, port, and ssl
   Client(std::string address_, unsigned short port_,
-    bool ssl_ = false)
+    bool ssl_)
   {
     _attr->address = address_;
     _attr->port = port_;
     _attr->ssl = ssl_;
   }
+#endif // OB_BELLE_CONFIG_SSL_ON
 
   // destructor
   ~Client()
