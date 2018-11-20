@@ -638,7 +638,7 @@ public:
 
 private:
 
-  inline std::string hex_encode(char const c)
+  std::string hex_encode(char const c)
   {
     char s[3];
 
@@ -658,7 +658,7 @@ private:
     return std::string(s);
   }
 
-  inline char hex_decode(std::string const& s)
+  char hex_decode(std::string const& s)
   {
     unsigned int n;
 
