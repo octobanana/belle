@@ -21,7 +21,7 @@
                                    OCTOBANANA
 
 Belle
-0.3.0
+0.4.0
 
 An HTTP / Websocket library in C++17 using Boost.Beast and Boost.ASIO.
 https://octobanana.com/software/belle
@@ -52,7 +52,7 @@ SOFTWARE.
 #define OB_BELLE_HH
 
 #define OB_BELLE_VERSION_MAJOR 0
-#define OB_BELLE_VERSION_MINOR 3
+#define OB_BELLE_VERSION_MINOR 4
 #define OB_BELLE_VERSION_PATCH 0
 
 // Config Begin
