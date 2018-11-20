@@ -1752,6 +1752,13 @@ public:
   {
   }
 
+  // constructor (address, port)
+  Server(std::string address_, unsigned short port_) :
+    _address {address_},
+    _port {port_}
+  {
+  }
+
   // destructor
   ~Server()
   {
