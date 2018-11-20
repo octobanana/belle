@@ -2792,8 +2792,10 @@ public:
   Client& on_http(Request const& req_, fn_on_http on_http_)
   {
     _attr->que.emplace_back(Req_Ctx());
-    _attr->que.back().req = req_;
-    _attr->que.back().on_http = on_http_;
+    auto& ctx = _attr->que.back();
+
+    ctx.req = req_;
+    ctx.on_http = on_http_;
 
     return *this;
   }
@@ -2801,18 +2803,73 @@ public:
   Client& on_http(Request&& req_, fn_on_http on_http_)
   {
     _attr->que.emplace_back(Req_Ctx());
-    _attr->que.back().req = std::move(req_);
-    _attr->que.back().on_http = on_http_;
+    auto& ctx = _attr->que.back();
+
+    ctx.req = std::move(req_);
+    ctx.on_http = on_http_;
 
     return *this;
   }
 
-  Client& on_http(std::string route_, fn_on_http on_http_)
+  Client& on_http(std::string const& target_, fn_on_http on_http_)
   {
-    _attr->que.emplace_back(Req_Ctx());
-    _attr->que.back().req.target(route_);
-    _attr->que.back().req.method(Method::get);
-    _attr->que.back().on_http = on_http_;
+    this->on_http_impl(Method::get, target_, Request::Params(), Headers(), {}, on_http_);
+
+    return *this;
+  }
+
+  Client& on_http(std::string const& target_, Request::Params const& params_, fn_on_http on_http_)
+  {
+    this->on_http_impl(Method::get, target_, params_, Headers(), {}, on_http_);
+
+    return *this;
+  }
+
+  Client& on_http(std::string const& target_, Headers const& headers_, fn_on_http on_http_)
+  {
+    this->on_http_impl(Method::get, target_, Request::Params(), headers_, {}, on_http_);
+
+    return *this;
+  }
+
+  Client& on_http(std::string const& target_, Request::Params const& params_, Headers const& headers_, fn_on_http on_http_)
+  {
+    this->on_http_impl(Method::get, target_, params_, headers_, {}, on_http_);
+
+    return *this;
+  }
+
+  Client& on_http(Method method_, std::string const& target_,
+    std::string const& body_, fn_on_http on_http_)
+  {
+    this->on_http_impl(method_, target_, Request::Params(), Headers(), body_, on_http_);
+
+    return *this;
+  }
+
+  Client& on_http(Method method_, std::string const& target_,
+    Request::Params const& params_,
+    std::string const& body_, fn_on_http on_http_)
+  {
+    this->on_http_impl(method_, target_, params_, Headers(), body_, on_http_);
+
+    return *this;
+  }
+
+  Client& on_http(Method method_, std::string const& target_,
+    Headers const& headers_,
+    std::string const& body_, fn_on_http on_http_)
+  {
+    this->on_http_impl(method_, target_, Request::Params(), headers_, body_, on_http_);
+
+    return *this;
+  }
+
+  Client& on_http(Method method_, std::string const& target_,
+    Request::Params const& params_, Headers const& headers_,
+    std::string const& body_, fn_on_http on_http_)
+  {
+    this->on_http_impl(method_, target_, params_, headers_, body_, on_http_);
 
     return *this;
   }
@@ -2865,6 +2922,22 @@ public:
   }
 
 private:
+
+  Client& on_http_impl(Method method_, std::string const& target_,
+    Request::Params const& params_, Headers const& headers_,
+    std::string const& body_, fn_on_http on_http_)
+  {
+    _attr->que.emplace_back(Req_Ctx());
+    auto& ctx = _attr->que.back();
+
+    Request req {method_, target_, 11, body_, headers_};
+    req.params() = params_;
+
+    ctx.req = std::move(req);
+    ctx.on_http = on_http_;
+
+    return *this;
+  }
 
   // hold the client attributes
   std::shared_ptr<Attr> _attr {std::make_shared<Attr>()};
