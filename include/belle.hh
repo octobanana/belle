@@ -534,10 +534,11 @@ inline std::string mime_type(std::string const& path)
 class Request : public http::request<http::string_body>
 {
   using Base = http::request<http::string_body>;
-  using Path = std::vector<std::string>;
-  using Params = std::unordered_multimap<std::string, std::string>;
 
 public:
+
+  using Path = std::vector<std::string>;
+  using Params = std::unordered_multimap<std::string, std::string>;
 
   // inherit base constructors
   using http::request<http::string_body>::message;
