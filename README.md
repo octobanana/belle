@@ -187,6 +187,8 @@ from a specific path. The example programs should be executed in their respectiv
 
 Within an examples directory, the following will build and run it in Debug mode.
 ```
+$ mkdir -p ./build
+$ cd ./build
 $ cmake ../ -DCMAKE_BUILD_TYPE=Debug
 $ make
 $ ./app
