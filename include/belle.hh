@@ -1196,10 +1196,15 @@ private:
 
   private:
 
+#ifndef _MSC_VER
     // generic lambda for sending different types of responses
-    static auto const constexpr send = [](auto self, auto&& res) -> void
+    static auto constexpr send = [](auto self, auto&& res) -> void
+#else
+    template <typename SELF_T, typename RES_T>
+    static constexpr void send(SELF_T self, RES_T&& res)
+#endif
     {
-      using item_type = typename std::remove_reference<decltype(res)>::type;
+      using item_type = std::remove_reference_t<decltype(res)>;
 
       auto ptr = std::make_shared<item_type>(std::move(res));
       self->_res = ptr;
