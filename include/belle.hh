@@ -854,6 +854,7 @@ private:
   {
     // the public directory for serving static files
     std::string public_dir {};
+    std::string index_file {"index.html"};
 
     // socket timeout
     std::chrono::seconds timeout {10};
@@ -1231,7 +1232,7 @@ private:
 
       if (path.back() == '/')
       {
-        path += "index.html";
+        path += _attr->index_file;
       }
 
       error_code ec;
@@ -1817,6 +1818,25 @@ public:
     return _attr->public_dir;
   }
 
+  // set the default index filename
+  Server& index_file(std::string index_file_)
+  {
+     if (index_file_.empty())
+     {
+        _attr->index_file = "index.html";
+     }
+     else {
+        _attr->index_file = index_file_;
+     }
+     return *this;
+  }
+  
+  // get the default index filename
+  std::string const& index_file()
+  {
+     return _attr->index_file;
+  }
+  
   // set the number of threads
   Server& threads(unsigned int threads_)
   {
