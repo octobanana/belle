@@ -1348,7 +1348,7 @@ private:
             {
               return static_cast<int>(e);
             }
-            catch (std::exception const& e)
+            catch (std::exception const&)
             {
               return 500;
             }
@@ -1390,7 +1390,7 @@ private:
         {
           _ctx.res.result(e);
         }
-        catch (std::exception const& e)
+        catch (std::exception const&)
         {
           _ctx.res.result(500);
         }
