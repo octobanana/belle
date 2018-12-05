@@ -1832,7 +1832,7 @@ public:
   }
   
   // get the default index filename
-  std::string const& index_file()
+  std::string index_file()
   {
      return _attr->index_file;
   }
