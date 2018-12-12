@@ -160,6 +160,12 @@ int main(int argc, char *argv[])
   int port {8080};
   app.port(port);
 
+  // warn if address:port is already in use
+  if (! app.available())
+  {
+    std::cerr << "Warning: '" << address << ":" << port << "' is in use\n";
+  }
+
   // enable serving static files from a public directory
   // if the path is relative, make sure to run the program
   // in the right working directory
