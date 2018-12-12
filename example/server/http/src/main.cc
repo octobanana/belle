@@ -199,7 +199,7 @@ int main(int argc, char *argv[])
     // stringstream to hold the response
     std::stringstream res; res
     << "Regex Captures\n"
-    << "path:   " << path << "\n"
+    << "path:  " << path << "\n"
     << "match: " << match << "\n";
 
     // set http response headers
