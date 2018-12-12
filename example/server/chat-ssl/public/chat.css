@@ -1,0 +1,99 @@
+html {
+  -ms-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  background-color: #1b1e24;
+  box-sizing: border-box;
+  color: #f0f0f0;
+  font-family: Lucida Sans Typewriter,Lucida Console,monaco,monospace;
+  font-size: 16px;
+  font-weight: normal;
+  line-height: 1.15;
+}
+
+* {
+  -webkit-overflow-scrolling: touch;
+  margin: 0;
+  padding: 0;
+}
+
+*,*::before,*::after {
+  box-sizing: inherit;
+}
+
+hr {
+  border: 0;
+  margin: 10px 0 10px 0;
+  border-top: 1px solid #424957;
+}
+
+a {
+  color: inherit;
+  background-color: inherit;
+  text-decoration: none;
+}
+
+textarea {
+  color: inherit;
+  background-color: inherit;
+  border: 1px solid #424957;
+  border-radius: 4px;
+  padding: 10px;
+}
+
+#content {
+  padding: 10px;
+  max-width: 600px;
+  text-align: center;
+  margin: 0 auto;
+}
+
+#room {
+  font-size: 1.8rem;
+  font-weight: bold;
+}
+
+#count {
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+#users {
+  font-size: 1.2rem;
+}
+
+#feed {
+  display: flex;
+  flex-flow: column-reverse nowrap;
+  border: 1px solid #424957;
+  border-radius: 4px;
+  padding: 10px;
+  width: 100%;
+}
+
+#msg {
+  width: 100%;
+  height: 100px;
+}
+
+#submit {
+  width: 100%;
+  height: 26px;
+  color: inherit;
+  font-weight: bold;
+  border: 1px solid #424957;
+  background-color: #23262c;
+  border-radius: 4px;
+}
+
+#submit:hover {
+  background-color: #2d3139;
+}
+
+.item {
+  text-align: left;
+  padding: 8px 10px 0 10px;
+}
+.item-body {
+  padding-bottom: 10px;
+}
