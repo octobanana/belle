@@ -82,15 +82,15 @@ __Belle welcomes and encourages your thoughts and feedback!__
 The following lists describe an overview of the current implemented features, along with the planned future features:
 
 ### Server Features
-* HTTP 1.0 / 1.1 server (async, multithreaded)
-* Websocket server (async)
+* HTTP 1.0 / 1.1 server (async, SSL / TLS, multithreaded)
+* Websocket server (async, SSL / TLS)
 * Serve static content
 * Serve dynamic content
 * Use lambdas as handlers
 * Routes can match a single, multiple, or all HTTP methods
 * Use regular expressions with capture groups to match and tokenize routes
 * Parse query parameters
-* Percent decode query parameters
+* URL percent-decode query parameters
 * Handle HTTP and Websocket on the same port
 * Group Websocket connections into channels for broadcasting
 
@@ -98,11 +98,10 @@ The following lists describe an overview of the current implemented features, al
 * HTTP 1.0 / 1.1 client (async, SSL / TLS)
 * Use lambdas as handlers
 * Serialize query parameters
-* Percent encode query parameters
+* URL percent-encode query parameters
 
 ### Future Features
 * Add an async, SSL / TLS Websocket client
-* Add SSL / TLS server support
 * add Websocket ping, pong, and timeout
 * Add an interface for a custom logger
 * Add connection manager for clean shutdown
