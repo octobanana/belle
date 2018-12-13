@@ -201,7 +201,9 @@ instructions listed above.
 ### Server
 * __hello__: an HTTP server with a get endpoint, post endpoint, and static file handling
 * __http__: a multithreaded HTTP server with multiple endpoints, static file handling, signal handling, and error handling
+* __https__: a multithreaded HTTPS server with multiple endpoints, static file handling, signal handling, and error handling
 * __chat__: a single threaded HTTP / Websocket chat room server with multiple endpoints, static file handling, signal handling, and error handling, with a basic html/css/js client interface
+* __chat-ssl__: a single threaded HTTPS / Websocket Secure chat room server with multiple endpoints, static file handling, signal handling, and error handling, with a basic html/css/js client interface
 
 ### Client
 * __http__: an HTTP client that makes multiple requests to a remote endpoint
