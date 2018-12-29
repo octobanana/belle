@@ -102,6 +102,7 @@ SOFTWARE.
 
 #include <boost/config.hpp>
 
+#include <cstdio>
 #include <cctype>
 #include <cstdlib>
 #include <cstddef>
