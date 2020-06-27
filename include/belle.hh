@@ -1414,8 +1414,9 @@ private:
 
     Websocket(tcp::socket&& socket_, std::shared_ptr<Attr> const attr_,
       Request&& req_, fns_on_websocket const& on_websocket_) :
-      Websocket_Base<Websocket> {socket_.get_executor().context(), attr_,
-        std::move(req_), on_websocket_},
+      Websocket_Base<Websocket> {
+        static_cast<net::io_context&>(socket_.get_executor().context()), 
+        attr_, std::move(req_), on_websocket_},
       _socket {std::move(socket_)}
     {
     }
@@ -2019,7 +2020,8 @@ private:
   public:
 
     Http(tcp::socket socket_, std::shared_ptr<Attr> const attr_) :
-      Http_Base<Http, Websocket> {socket_.get_executor().context(), attr_},
+      Http_Base<Http, Websocket> {
+        static_cast<net::io_context&>(socket_.get_executor().context()), attr_},
       _socket {std::move(socket_)}
     {
     }
