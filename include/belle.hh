@@ -820,7 +820,7 @@ public:
   // serialize path and query parameters to the target
   void params_serialize()
   {
-    std::string path {target().to_string()};
+    std::string path {target()};
 
     _path.clear();
     _path.emplace_back(path);
@@ -842,7 +842,7 @@ public:
   // parse the query parameters from the target
   void params_parse()
   {
-    std::string path {target().to_string()};
+    std::string path {target()};
 
     // separate the query params
     auto params = Detail::split(path, "?", 1);
@@ -1584,7 +1584,7 @@ private:
         return 404;
       }
 
-      std::string path {_attr->public_dir + _ctx.req.target().to_string()};
+      std::string path {_attr->public_dir + std::string{_ctx.req.target()}};
 
       if (path.back() == '/')
       {
@@ -1641,7 +1641,7 @@ private:
       std::regex_constants::match_flag_type const rx_flgs {std::regex_constants::match_not_null};
 
       // the request path
-      std::string path {_ctx.req.target().to_string()};
+      std::string path {_ctx.req.target()};
 
       // separate the query parameters
       auto params = Detail::split(path, "?", 1);
@@ -1807,7 +1807,7 @@ private:
     bool handle_websocket()
     {
       // the request path
-      std::string path {_ctx.req.target().to_string()};
+      std::string path {_ctx.req.target()};
 
       // separate the query parameters
       auto params = Detail::split(path, "?", 1);
